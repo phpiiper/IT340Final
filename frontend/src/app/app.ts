@@ -6,11 +6,14 @@ import {MatIconModule} from '@angular/material/icon';
 import {MatTooltipModule} from '@angular/material/tooltip';
 import {MatInputModule} from '@angular/material/input';
 import {MatTabsModule} from '@angular/material/tabs';
+import {MatExpansionModule} from '@angular/material/expansion';
 import {FormControl, FormGroup, ReactiveFormsModule, Validators} from '@angular/forms';
+import {Card} from '../../components/card';
+
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, MatToolbarModule, MatButtonModule, MatIconModule, MatTooltipModule, MatInputModule, MatTabsModule, ReactiveFormsModule],
+  imports: [RouterOutlet, MatToolbarModule, MatButtonModule, MatIconModule, MatTooltipModule, MatInputModule, MatTabsModule, ReactiveFormsModule,MatExpansionModule,Card],
   templateUrl: './app.html',
   styleUrl: './app.css'
 })
@@ -39,6 +42,27 @@ export class App {
   profileForm = new FormGroup({
     username: new FormControl('username', Validators.required),
     password: new FormControl('pw', Validators.required),
-});
+  });
+  async test(){
+    console.log("TEST POINT")
+      const url = `https://wiki.dominionstrategy.com/api.php?` +
+        new URLSearchParams({
+          action: "parse",
+          page: "Intrigue",
+          format: "json",
+          origin: "*"
+        });
+
+      const res = await fetch(url);
+      const data = await res.json();
+
+      console.log(data)
+
+      return {
+        title: data.parse.title,
+        html: data.parse.text["*"],   // full rendered HTML
+        categories: data.parse.categories
+      };
+  }
 
 }

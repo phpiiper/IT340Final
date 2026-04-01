@@ -5,6 +5,11 @@
       <p>Congratulations! City, {{ city }}</p>
       !-->
     <div class="body">
+      <button
+        matButton="filled"
+        (click)="test()"
+      >TEST</button>
+
       <mat-tab-group
         dynamicHeight
       >
@@ -34,13 +39,9 @@
           </div>
           <br />
 
-          <div class="dom-card-container">
-              <span class="name">CardName</span>
-              <span class="exp">Expansion</span>
-              <span class="cost">Cost (5 coins)</span>
-              <span class="desc">Reveal cards from your deck until you reveal 2 Treasure cards. Put those Treasure cards into your hand and discard the other revealed cards</span>
-              <span class="type">Action-Attack</span>
-          </div>
+        <plp-card
+            cardName="Artificer"
+        ></plp-card>
 
 
         </mat-tab>

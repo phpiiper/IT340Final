@@ -49,15 +49,14 @@
 
 
 .dom-card-container {
-    border: 2px solid #dfdfdf;
-    padding: 0.5rem;
-    border-radius: 0.5rem;
-
     display: flex; flex-direction: column; gap: 0.5rem;
 
-    width: 222px;
-    height: 320px;
-    background-color: white;
+    width: 148px;
+    height: 236px;
+
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
 }
 .dom-card-container > .name {
   font-size: 1.25rem;
