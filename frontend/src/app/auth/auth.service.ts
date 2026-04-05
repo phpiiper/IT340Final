@@ -6,7 +6,7 @@ import { BehaviorSubject, Observable, tap } from 'rxjs';
 providedIn: 'root'
 })
 export class AuthService {
-private apiUrl = 'http://localhost:4200/api';
+private apiUrl = 'http://localhost:3000/api';
 private currentUserSubject = new BehaviorSubject<any>(null);
 public currentUser$ = this.currentUserSubject.asObservable();
 
@@ -21,21 +21,21 @@ constructor(private http: HttpClient) {
 login(username: string, password: string): Observable<any> {
     console.log('Login attempt:', username);
     // [ADD LOG HERE]
-    
+
     return this.http.post<any>(`${this.apiUrl}/login`, { username, password }, {
     withCredentials: true // Important for cookies
     }).pipe(
     tap(response => {
         console.log('Login response received:', response);
         // [ADD LOG HERE]
-        
+
         // If using sessionStorage (Option 2)
         if (response.token) {
         const user = {
             ...response.user,
             token: response.token
         };
-        
+
         // Store user details in sessionStorage
         sessionStorage.setItem('currentUser', JSON.stringify(user));
         this.currentUserSubject.next(user);
@@ -53,7 +53,7 @@ login(username: string, password: string): Observable<any> {
 logout(): Observable<any> {
     console.log('Logout service method called');
     // [ADD LOG HERE]
-    
+
     return this.http.post<any>(`${this.apiUrl}/logout`, {}, {
     withCredentials: true // Important for cookies
     }).pipe(
