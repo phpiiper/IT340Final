@@ -1,0 +1,74 @@
+<div class="body" id="deck-page">
+  <div class="flex header">
+    <a href="/">Back</a>
+    <h2>Deck</h2>
+  </div>
+  @if (loading()){
+    <h2>Loading...</h2>
+  } @else {
+    @if (!loading() && passwordRequired() && !deckUnlocked()) {
+      <h2>Password Required!</h2>
+      <form
+          class="form"
+          [formGroup]="passwordForm"
+          (ngSubmit)="sendPassword()"
+      >
+        <input
+          type="password"
+          placeholder="Password"
+          name="password"
+          formControlName="password"
+        />
+        <button
+
+        >Submit</button>
+      </form>
+    } @else if (deckUnlocked()) {
+      <h2>Deck is Unlocked!</h2>
+      <div class="deck-info-container">
+        <span>Name: {{deck()?.name}}</span>
+        <span>Max Cards: {{deck()?.maxCards}}</span>
+      </div>
+      <div class="tags-container">
+        @for (tag of deck()?.tags ?? []; track tag) {
+          <span class="tag">{{tag}}</span>
+        }
+      </div>
+      <div>
+        <h2>Cards</h2>
+        <div class="cards-container">
+          @for (card of deck()?.cards ?? []; track card.name) {
+            <plp-card
+              name="{{card.name}}"
+              path="cards/{{card.path}}"
+              expansion="{{card.expansion}}"
+            ></plp-card>
+          }
+        </div>
+      </div>
+    } @else {
+      <h2>Deck is Public!</h2>
+      <div class="deck-info-container">
+        <span>Name: {{deck()?.name}}</span>
+        <span>Max Cards: {{deck()?.maxCards}}</span>
+      </div>
+      <div class="tags-container">
+        @for (tag of deck()?.tags ?? []; track tag) {
+          <span class="tag">{{tag}}</span>
+        }
+      </div>
+      <div>
+        <h2>Cards</h2>
+        <div class="cards-container">
+          @for (card of deck()?.cards ?? []; track card.name) {
+            <plp-card
+              name="{{card.name}}"
+              path="cards/{{card.path}}"
+              expansion="{{card.expansion}}"
+            ></plp-card>
+          }
+        </div>
+      </div>
+    }
+  }
+</div>

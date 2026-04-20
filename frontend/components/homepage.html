@@ -29,10 +29,28 @@
           </div>
           <br />
 
-        <plp-card
-            cardName="Artificer"
-        ></plp-card>
+          <cardpopup
+            name="Amulet"
+            path="cards/adventures_amulet.jpg"
+            expansion="Core"
+          ></cardpopup>
 
+  <div class="card-list">
+    @if (cards.isLoading()){
+      <div>LOADING</div>
+    }
+    @if (!cards.isLoading() && cards.hasValue()){
+      @for (card of cards.value().cards ?? []; track card.name) {
+        <plp-card
+          name="{{card.name}}"
+          path="cards/{{card.path}}"
+          expansion="{{card.expansion}}"
+        ></plp-card>
+      } @empty {
+        <li>There are no items.</li>
+      }
+    }
+  </div>
 
         </mat-tab>
         <mat-tab label="Decks">
@@ -103,4 +121,3 @@
         </mat-tab>
       </mat-tab-group>
     </div>
-    

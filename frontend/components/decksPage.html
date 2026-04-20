@@ -1,0 +1,77 @@
+<div class="body" id="deck-page">
+  <div class="nav-bar">
+    <a href="/create"><button>
+      <mat-icon>edit</mat-icon>
+    </button></a>
+    <a href="/decks"><button>
+      <mat-icon>book</mat-icon>
+    </button></a>
+    <span class="title">DDM</span>
+    <button (click)="logout()" id="logout">
+      <mat-icon>logout</mat-icon>
+    </button>
+    <a href="/account" id="account"><button>
+      <mat-icon>person</mat-icon>
+    </button></a>
+  </div>
+
+  <div class="body">
+    @if (loading()){
+      <h2>Loading...</h2>
+    } @else {
+      <br>
+      <h2>My Decks</h2>
+      <br>
+      <hr />
+      <br>
+      <div class="container">
+        @for (deck of decks(); track deck._id) {
+          <div class="deck-container">
+            <h3>{{deck.name}}</h3>
+            <a href="/deck/{{deck._id}}" class="link">
+              <button>View Deck</button>
+            </a>
+          </div>
+        } @empty {
+          No decks created, <a href="/create">create one!</a>
+        }
+      </div>
+
+      <br >
+      <h2>Search Up Deck</h2>
+      <br>
+      <form
+        [formGroup]="searchForm"
+        (ngSubmit)="search()"
+      >
+        <input
+          type="text"
+          placeholder="Deck ID"
+          formControlName="id"
+          required
+          style="padding: 0.5rem 1rem; border-radius: 0.5rem; border: 1px solid #ccc; width: 20rem;"
+        >
+        <button
+          type="submit"
+          style="padding: 0.5rem 1rem; border-radius: 0.5rem; border: 1px solid #ccc; margin-left: 0.5rem; color: white; background-color: #007bff;"
+        >Search</button>
+        <span class="error">
+          @if (searchError()){
+            {{searchErrorMessage()}}
+          }
+        </span>
+      </form>
+      <br>
+      <hr />
+
+      <br >
+      <h2>Copy Deck</h2>
+      <br>
+      <span>in progress</span>
+      <br>
+      <br>
+      <hr />
+
+    }
+  </div>
+</div>

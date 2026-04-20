@@ -1,0 +1,18 @@
+[{
+  "_id": {
+    "$oid": "69d42224f648b52cd7c4ffff"
+  },
+  "username": "username",
+  "email": "email@email.com",
+  "password": "$2b$10$rikgnSluTzxW8pNs9ounaeNUe2hepkZNfLL0gdMoFduGxctxaQ2fa",
+  "role": "U"
+},
+{
+  "_id": {
+    "$oid": "69dc1f598064d1f444943338"
+  },
+  "username": "phpiiper",
+  "email": "phpiiper@gmail.com",
+  "password": "$2b$10$QYb/x88N0DoXjR.Fy255J.IDIKJey0t1MMrQXpfK1o1GZ4CEx6A6K",
+  "role": "U"
+}]

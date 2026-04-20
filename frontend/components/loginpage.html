@@ -1,0 +1,58 @@
+<div class="login-page">
+  <div class="header">
+    <h1>DDB</h1>
+    <p>Dominion Deck Builder</p>
+    <h3>
+      @if (tab() === 0){
+        Log In
+      }
+      @if (tab() === 1){
+        Register
+      }
+    </h3>
+    <hr />
+  </div>
+
+  <form
+    class="login-form form"
+    [formGroup]="profileForm"
+    (ngSubmit)="loginPageHandler(tab())"
+  >
+    <label>
+      <span>Email</span>
+      <input type="email" placeholder="Email" formControlName="email"/>
+    </label>
+
+    @if (tab() === 1){
+    <label>
+      <span>Username</span>
+      <input type="text" placeholder="Username" formControlName="username"/>
+    </label>
+    }
+    <label>
+      <span>Password</span>
+      <input type="password" placeholder="Password" formControlName="password"/>
+    </label>
+    <div class="flex" style="gap: 1rem; align-items: center;">
+      @if (tab() === 0){
+        <a
+          href="#"
+          (click)="swapTab(1)"
+        >Register</a>
+        <button type="submit">Login</button>
+      }
+      @if (tab() === 1){
+        <a
+          href="#"
+          (click)="swapTab(0)"
+        >Login</a>
+        <button type="submit">Register</button>
+      }
+    </div>
+    <span class="error">
+      @if (signUpError().error){
+        {{signUpError().message}}
+      }
+    </span>
+  </form>
+</div>

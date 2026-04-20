@@ -1,0 +1,41 @@
+[{
+  "_id": {
+    "$oid": "69e031335cc6e90b53937bd3"
+  },
+  "cards": [
+    "69d3ffbc4793ddacea52573d",
+    "69d3ffbc4793ddacea52573e",
+    "69d3ffbc4793ddacea52573f"
+  ],
+  "author": {
+    "$oid": "69dc1f598064d1f444943338"
+  },
+  "maxCards": 12,
+  "tags": [],
+  "name": "NameOfDeck"
+},
+{
+  "_id": {
+    "$oid": "69e57c4551a795c610339648"
+  },
+  "author": {
+    "$oid": "69dc1f598064d1f444943338"
+  },
+  "cards": [],
+  "maxCards": 12,
+  "tags": [],
+  "name": "New Deck"
+},
+{
+  "_id": {
+    "$oid": "69e57ce3bf4f79a23f8f7ab0"
+  },
+  "author": {
+    "$oid": "69dc1f598064d1f444943338"
+  },
+  "cards": [],
+  "maxCards": 12,
+  "tags": [],
+  "name": "New Deck",
+  "password": "$2b$10$GftldrEmkAX0VB45i94Nye1l4xXhyMFx9pQUu9TsPrVcAOSLCW.9u"
+}]

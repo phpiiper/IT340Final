@@ -1,14 +1,24 @@
 import { Routes } from '@angular/router';
-import { LoginComponent } from './auth/login/login.components';
-import { HomePage } from '../../components/homepage';
+import { LoginPage } from '../../components/loginpage';
+import { CreatePage } from '../../components/createPage';
+import { DeckPage } from '../../components/deckPage';
+import { DecksPage } from '../../components/decksPage';
 
 export const routes: Routes = [
   {
     path: '',
-    component: HomePage
+    component: LoginPage
   },
   {
-    path: 'login',
-    component: LoginComponent 
+    path: 'create',
+    component: CreatePage
   },
+  {
+    path: "deck/:id",
+    component: DeckPage
+  },
+  {
+    path: "decks",
+    component: DecksPage
+  }
 ];

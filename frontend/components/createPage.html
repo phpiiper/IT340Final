@@ -1,0 +1,96 @@
+<div class="create-page">
+  <div class="nav-bar">
+    <a href="/create"><button>
+      <mat-icon>edit</mat-icon>
+    </button></a>
+    <a href="/decks"><button>
+      <mat-icon>book</mat-icon>
+    </button></a>
+    <span class="title">DDM</span>
+    <button (click)="logout()" id="logout">
+      <mat-icon>logout</mat-icon>
+    </button>
+    <a href="/account" id="account"><button>
+      <mat-icon>person</mat-icon>
+    </button></a>
+
+  </div>
+  <div class="filter-bar">
+    <form class="filter-search form" [formGroup]="filterForm" (ngSubmit)="filterHandler()">
+      <input class="search-bar" type="text" placeholder="Search..." formControlName="name">
+      <div style="position: relative;">
+        <button
+          type="button"
+          (click)="toggleExpansionFilter()"
+        >Filter Expansions</button>
+        <div class="filter-expansion-container {{ showExpansionFilter() ? 'show' : 'hide' }}">
+          @for (exp of expansions(); track `${exp}`) {
+            <button
+              class="filter-btn expansion {{  cardFilters().expansions.includes(exp) ? 'active' : 'inactive'  }}"
+              (click)="addFilter('expansion',exp)"
+            >{{exp}}</button>
+          } @empty {
+            <li>There are no items.</li>
+          }
+        </div>
+      </div>
+    </form>
+  </div>
+  <div class="card-list list">
+    <div class="container">
+      @if (filteredCards().length == 0 && cards.isLoading()){
+        <div>LOADING</div>
+      }
+      @if (filteredCards().length > 0){
+        @for (c of filteredCards(); track `${c.path}`) {
+          <plp-card
+            name="{{c.name}}"
+            path="cards/{{c.path}}"
+            expansion="{{c.expansion}}"
+            (cardClick)="addCardToDeck(c.name)"
+          ></plp-card>
+        } @empty {
+          <li>There are no items.</li>
+        }
+      }
+    </div>
+    <div class="header">
+      Cards /\
+    </div>
+  </div>
+  <div class="deck-list list" style="margin-top: 1rem;">
+    <div class="header">
+      <button
+        (click)="logDeck()"
+      > LOG
+      </button>
+      <span class="title" style="margin: 0 1rem;">Deck</span>
+      <input
+        type="number"
+        name="maxCards"
+        value="{{deck().maxCards}}"
+        min="{{deck().cards.length}}"
+        (change)="updateMaxCards($event)"
+        style="width: 50px;"
+      >
+      <button
+        (click)="saveDeck()"
+        [disabled]="disableSaving()"
+      >Save</button>
+    </div>
+    <div class="container">
+      @if (deck().cards.length > 0 && !cards.isLoading()) {
+        @for (c of deck().cards; track `${c.path}`) {
+          <plp-card
+            name="{{c.name}}"
+            path="cards/{{c.path}}"
+            expansion="{{c.expansion}}"
+            (cardClick)="removeCardFromDeck(c.name)"
+          ></plp-card>
+        } @empty {
+          <li>There are no items.</li>
+        }
+      }
+    </div>
+  </div>
+</div>
