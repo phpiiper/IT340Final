@@ -4,6 +4,7 @@ import {MatButton} from '@angular/material/button';
 import {Card} from './card';
 import {FormGroup, FormControl, Validators, ReactiveFormsModule} from '@angular/forms';
 import {CardType} from './createPage';
+import {environment} from "../src/environments/environment"
 
 export interface DeckType {
   _id: string;
@@ -30,8 +31,7 @@ export class DeckPage implements OnInit{
 
   async fetchDeck(){
     this.loading.set(true);
-    console.log(24, this.route.snapshot.paramMap.get("id"), this.passwordForm.value.password)
-    const res = await fetch("http://localhost:3000/api/deck",{
+    const res = await fetch(`${environment.backend}/api/deck`,{
       credentials: "include",
       headers: { "Content-Type": "application/json" },
       method: "POST",
@@ -41,6 +41,7 @@ export class DeckPage implements OnInit{
       })
     });
     const data = await res.json();
+    console.log(44,data)
     if (data.error){
       if (data.message === "Password required!"){
         this.passwordRequired.set(true)
@@ -50,9 +51,7 @@ export class DeckPage implements OnInit{
     } else {
       if (data.deck){
         this.deck.set(data.deck)
-        if (data.deck.password){
-          this.deckUnlocked.set(true)
-        }
+        this.deckUnlocked.set(true)
       }
     }
     this.loading.set(false)
@@ -68,7 +67,7 @@ export class DeckPage implements OnInit{
   cards = resource({
     loader: async ()=>{
       try {
-        const res = await fetch(`http://localhost:3000/api/cards?&itemsPerPage=351`);
+        const res = await fetch(`${environment.backend}/api/cards?&itemsPerPage=351`);
         const data = await res.json();
         return data?.cards || []
       } catch (e){
@@ -79,7 +78,7 @@ export class DeckPage implements OnInit{
   })
 
   async logout(){
-    const r = await fetch("http://localhost:3000/api/auth/signOut",{
+    const r = await fetch(`${environment.backend}/api/auth/signOut`,{
       credentials: "include",
     })
     // console.log(await r.json())

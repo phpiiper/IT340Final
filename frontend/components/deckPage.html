@@ -23,11 +23,16 @@
 
         >Submit</button>
       </form>
-    } @else if (deckUnlocked()) {
-      <h2>Deck is Unlocked!</h2>
+    } @else if (deck()) {
       <div class="deck-info-container">
-        <span>Name: {{deck()?.name}}</span>
-        <span>Max Cards: {{deck()?.maxCards}}</span>
+        <div class="meta-data">
+          <span>NAME</span>
+          <span>{{deck()?.name}}</span>
+        </div>
+        <div class="meta-data">
+          <span>MAX CARDS</span>
+          <span>{{deck()?.maxCards}}</span>
+        </div>
       </div>
       <div class="tags-container">
         @for (tag of deck()?.tags ?? []; track tag) {
@@ -47,28 +52,7 @@
         </div>
       </div>
     } @else {
-      <h2>Deck is Public!</h2>
-      <div class="deck-info-container">
-        <span>Name: {{deck()?.name}}</span>
-        <span>Max Cards: {{deck()?.maxCards}}</span>
-      </div>
-      <div class="tags-container">
-        @for (tag of deck()?.tags ?? []; track tag) {
-          <span class="tag">{{tag}}</span>
-        }
-      </div>
-      <div>
-        <h2>Cards</h2>
-        <div class="cards-container">
-          @for (card of deck()?.cards ?? []; track card.name) {
-            <plp-card
-              name="{{card.name}}"
-              path="cards/{{card.path}}"
-              expansion="{{card.expansion}}"
-            ></plp-card>
-          }
-        </div>
-      </div>
+      <h2>Deck is Locked</h2>
     }
   }
 </div>
