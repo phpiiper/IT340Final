@@ -1,0 +1,108 @@
+<div class="body" id="admin-page">
+  @if (loading()){
+    <h2>LOADING</h2>
+  } @else if (!canAccess()){
+    <h2>CANNOT ACCESS</h2>
+    <a href="/">Go Back</a>
+  } @else {
+  <div class="top-menu">
+      <button
+        type="button"
+        (click)="setTab(0)"
+        class="tab-btn {{ tab() === 0 ? 'active' : '' }}">Users</button>
+      <button
+        type="button"
+        (click)="setTab(1)"
+        class="tab-btn {{ tab() === 1 ? 'active' : '' }}">Logs</button>
+      <button class="end-btn">BACK</button>
+  </div>
+  <div class="content">
+    @if (tab() === 0){
+        <label>
+            <span>Pick User</span>
+            <select>
+              <option value="user1">User1</option>
+              <option value="user2">User2</option>
+              <option value="user3">User3</option>
+            </select>
+        </label>
+        <div style="display: flex; align-items: center; gap: 0.5rem; width: 100%; flex-wrap: wrap;">
+            <label>
+              <span>ID</span>
+              <input
+                value="123456789"
+                disabled
+              />
+            </label>
+            <label>
+              <span>Name</span>
+              <input
+                value="John Doe"
+              />
+            </label>
+        </div>
+        <label>
+          <span>Email</span>
+          <input
+            type="email"
+            value="mail@mail.com"
+          />
+        </label>
+      <div>
+        <label>
+          <span>Password</span>
+          <input
+            type="password"
+            value="@Password123!"
+          />
+          <button>Update</button>
+        </label>
+      </div>
+    }
+    @if (tab() === 1){
+      <div style="width: fit-content; margin-left: auto;">
+        <button (click)="fetchAdminData()">Refresh Logs</button>
+        <span style="margin-left: 1rem; font-size: 0.9rem;">Last Updated: {{ lastUpdated() }}</span>
+      </div>
+      <div class="top-menu" style="align-items: center; border: 1px solid black; padding: 1rem; margin-bottom: 1rem;">
+          <span>FILTERS</span>
+          <label style="flex-direction: column; gap: 0; align-items: flex-start;">
+            <span style="font-size: 0.8rem;">Level</span>
+            <select>
+                <option value="1">Severe</option>
+                <option value="2">Warning</option>
+                <option value="3">Info</option>
+            </select>
+          </label>
+          <label style="flex-direction: column; gap: 0; align-items: flex-start;">
+            <span style="font-size: 0.8rem;">Describe</span>
+            <select>
+                <option value="f">Full</option>
+                <option value="s">Short</option>
+            </select>
+          </label>
+          <label style="flex-direction: column; gap: 0; align-items: flex-start;">
+            <span style="font-size: 0.8rem;">Filter by API</span>
+            <select>
+                <option value="-1">None</option>
+                @for (filterAPI of filteredAPIs(); track `${filterAPI}`) {
+                  <option value="{{ filterAPI }}">{{filterAPI}}</option>
+                }
+            </select>
+          </label>
+      </div>
+      <div class="content">
+        @for (log of logs(); track `${log.id}`) {
+          <log
+            level="{{log.level || 'Info'}}"
+            api="{{log.api}}"
+            date="{{log.date}}"
+            action="{{log.action}}"
+            description="{{log.description}}"
+          />
+        }
+      </div>
+    }
+  </div>
+  }
+</div>
