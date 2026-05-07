@@ -27,6 +27,8 @@ export interface CardFilterType {
 }
 export interface DeckType {
   name: string;
+  description: string;
+  type: string;
   tags: string[];
   cards: CardType[];
   maxCards: number;
@@ -41,6 +43,9 @@ export class CreatePage implements OnInit{
   constructor(private router: Router){}
 
   ngOnInit(){
+  /*
+      INIT
+   */
     this.fetchUser().then(res => {
         if (!res.verify){
             this.router.navigate(['/']).then(() => {})
@@ -49,7 +54,9 @@ export class CreatePage implements OnInit{
         console.log(res)
         this.user.set(res.verify)
       })
-    }
+    // GET MAX/MIN
+
+  }
 
   async fetchUser(){
     const res = await fetch("http://localhost:3000/api/auth/checkLogin",{
@@ -70,11 +77,15 @@ export class CreatePage implements OnInit{
   });
   async filterHandler(){
     const filterObj = this.filterForm.value;
+
+    console.log(78,filterObj)
+
+    // @ts-ignore
     this.cardFilters.update(prev => ({
       ...prev,
       name: filterObj.name || "",
-      types: [],
-      maxCost: 6, minCost: 0
+      minCost: filterObj.minCost ?? 0,
+      maxCost: filterObj.maxCost ?? 8
     }))
   }
   cardFilters= signal<CardFilterType>({
@@ -84,11 +95,25 @@ export class CreatePage implements OnInit{
     maxCost: 6, minCost: 0
   })
 
+  resetFilters() {
+    this.closeFilters()
+    this.cardFilters.update(prev => ({
+      ...prev,
+      name: "",
+      minCost: 0,
+      maxCost: 8,
+      types: [],
+      expansions: []
+    }))
+    this.card_size.set("lg")
+  }
+
   cards = resource({
     loader: async ()=>{
       try {
         const res = await fetch(`http://localhost:3000/api/cards?&itemsPerPage=351`);
         const data = await res.json();
+        console.log(data?.cards);
         return data?.cards || []
       } catch (e){
         console.log(e)
@@ -100,22 +125,43 @@ export class CreatePage implements OnInit{
     const c = this.cards.value() ?? [];
     return [...new Set<string>(c.map((x: CardType) => x.expansion))]
   });
+  costs = computed(():number[] => {
+    const c = this.cards.value()?.map((x:CardType) => x.cost) ?? [];
+    return [Math.min(...c), Math.max(...c)]
+  });
+  types = computed(():string[] => {
+    const c = this.cards.value() ?? [];
+    return [...new Set<string>(c.map((x: CardType) => x.types).flatMap((x:any) => x))]
+  });
   deck = signal<DeckType>({
     name: "Deck",
+    type: "Public",
     cards: [],
+    description: "",
     maxCards: 10,
     tags: []
   })
 
   filteredCards = computed(() => {
     const c = this.cards.value() || [];
-    // console.log("FILTERS", this.cardFilters(), this.deck().cards)
+
+   //  console.log("FILTERS", this.cardFilters(), this.deck().cards)
+
     const newCards = c.filter((x : any) => {
+      // 1. Check for name match
       if (!x.name.toLowerCase().includes(this.cardFilters().name.toLowerCase())) {return false}
+      // 2. Check for expansions match
       if (this.cardFilters().expansions.length > 0 && !this.cardFilters().expansions.includes(x.expansion)) {return false}
+      // 3. Check for types match
+      if (this.cardFilters().types.length > 0 && !this.cardFilters().types.some(t => x.types.includes(t))) { return false }
+      //
       // @ts-ignore
+      // 4. Check if in deck
       if (this.deck().cards.some(d => d._id === x._id)) {return false}
-      // if in deck
+      // 5. Check for MAX and MIN costs
+
+      if (x.cost > this.cardFilters().maxCost || x.cost < this.cardFilters().minCost) {return false}
+
       return true
     })
     return newCards
@@ -152,7 +198,18 @@ export class CreatePage implements OnInit{
         ...prev, expansions: [...prev.expansions, value]
       }))
       // console.log(155, this.cardFilters().expansions.filter(x => x!==value))
-    } else {
+    } else if (type === "types"){
+      if (this.cardFilters().types.includes(value)) {
+        console.log(83, this.cardFilters().types.filter(x => x!==value))
+        this.cardFilters.update((prev: any) => ({
+          ...prev, types: prev.types.filter((x: any) => x !== value)
+        }))
+        return
+      }
+      this.cardFilters.update((prev: any) => ({
+        ...prev, types: [...prev.types, value]
+      }))
+    }else {
       this.cardFilters.update((prev: any) => ({
         ...prev, [type]: value
       }))
@@ -160,18 +217,48 @@ export class CreatePage implements OnInit{
     // console.log(158, this.cardFilters())
   }
 
+  closeFilters(){
+    this.showTypeFilter.update(prev => false)
+    this.showExpansionFilter.update(prev => false)
+    this.showDeckPage.update(prev => false)
+  }
   showExpansionFilter = signal(false)
   toggleExpansionFilter(){
+    if (!this.showExpansionFilter()){
+      // opening... so close all others
+      this.closeFilters()
+    }
     this.showExpansionFilter.update(prev => !prev)
   }
 
+  showTypeFilter = signal(false)
+  toggleTypeFilter(){
+    if (!this.showTypeFilter()){
+      // opening... so close all others
+      this.closeFilters()
+    }
+    this.showTypeFilter.update(prev => !prev)
+  }
+
+
+  showDeckPage = signal(true)
+  toggleDeckPage(){
+    if (!this.showDeckPage()){
+      // opening... so close all others
+      this.closeFilters()
+    }
+    this.showDeckPage.update(prev => !prev)
+  }
+
   disableSaving = signal(false)
-  saveDeck(){
+  saveDeck(event:Event){
+    event.preventDefault();
     console.log(this.deck())
     this.disableSaving.set(true)
+    let finDeck:any = this.deck()
     fetch("http://localhost:3000/api/deck/create",{
       method: "POST",
-      body: JSON.stringify(this.deck()),
+      body: JSON.stringify(finDeck),
       headers: { "Content-Type": "application/json" },
       credentials: "include",
     }).then(async res => {
@@ -198,17 +285,70 @@ export class CreatePage implements OnInit{
   logDeck(){
     console.log(62, this.deck())
   }
-  updateMaxCards(e: any){
-    if (isNaN(e.target.value) || e.target.value < 1){
-      return
-    }
+  resetDeck(){
+    this.deck.set({
+      name: "Deck",
+      type: "Public",
+      cards: [],
+      description: "",
+      maxCards: 10,
+      tags: []
+    })
+  }
+  updateMaxCards(int:number){
     this.deck.update((prev: any) => ({
-      ...prev, maxCards: JSON.parse(e.target.value)
+      ...prev, maxCards: int
     }))
     if (this.deck().maxCards <= this.deck().cards.length){
       this.deck.update((prev: any) => ({
         ...prev, maxCards: prev.cards.length
       }))
+    }
+  }
+  decrease_card_count(int:number) {
+    const newAmt = this.deck().maxCards - int;
+    if (newAmt !== 0 && newAmt >= this.deck().cards.length){
+      this.deck.update((prev: any) => ({
+        ...prev, maxCards: newAmt
+      }))
+    }
+  }
+  increase_card_count(int:number) {
+    const newAmt = this.deck().maxCards + int;
+    this.deck.update((prev: any) => ({
+      ...prev, maxCards: newAmt
+    }))
+  }
+
+  deck_type = signal("Public")
+  toggle_deck_type(){
+    let options = ["Public", "Private", "Password"]
+    let i_ind = options.findIndex(x => x === this.deck_type()) + 1
+    if (i_ind === options.length) {i_ind = 0}
+    this.deck_type.set(options[i_ind])
+    this.updateDeckInfo("type",options[i_ind])
+  }
+  password = signal("")
+  showPassword = signal(false);
+  toggle_password_view(){
+    this.showPassword.update(prev => !prev)
+  }
+
+  card_size = signal("lg")
+  toggle_card_size(){
+      let options = ["lg","md","sm"]
+      let i_ind = options.findIndex(x => x === this.card_size()) + 1
+      if (i_ind === options.length) {i_ind = 0}
+      this.card_size.set(options[i_ind])
+  }
+
+  updateDeckInfo(type:string, event:any){
+    if (["name","description","type","password"].includes(type)){
+        let value = typeof event === "object" && event?.target ? (event.target as HTMLInputElement).value : event;
+        this.deck.update(x => ({
+          ...x,
+          [type]: value || ""
+        }))
     }
   }
 

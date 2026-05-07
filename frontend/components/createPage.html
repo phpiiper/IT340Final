@@ -1,4 +1,6 @@
-<div class="create-page">
+<div
+  class="create-page"
+>
   <div class="nav-bar">
     <a href="/create"><button>
       <mat-icon>edit</mat-icon>
@@ -6,6 +8,11 @@
     <a href="/decks"><button>
       <mat-icon>book</mat-icon>
     </button></a>
+    @if (user()?.role === "A") {
+      <a href="/admin"><button>
+        <mat-icon>square</mat-icon>
+      </button></a>
+    }
     <span class="title">DDM</span>
     <button (click)="logout()" id="logout">
       <mat-icon>logout</mat-icon>
@@ -17,13 +24,29 @@
   </div>
   <div class="filter-bar">
     <form class="filter-search form" [formGroup]="filterForm" (ngSubmit)="filterHandler()">
-      <input class="search-bar" type="text" placeholder="Search..." formControlName="name">
+      <button
+        style="margin-left: unset; color: white; background-color: black;"
+        type="button"
+        (click)="resetFilters()"
+      >Reset</button>
+      <button
+        (click)="toggle_card_size()"
+        style="margin-left: unset; color: white; background-color: black; font-size: 0.8rem;"
+      > Toggle Size ({{card_size()}})
+      </button>
+      <input
+        (click)="closeFilters()"
+        class="search-bar"
+        type="text"
+        placeholder="Search..."
+        formControlName="name"
+      >
       <div style="position: relative;">
         <button
           type="button"
           (click)="toggleExpansionFilter()"
         >Filter Expansions</button>
-        <div class="filter-expansion-container {{ showExpansionFilter() ? 'show' : 'hide' }}">
+        <div class="filter-container {{ showExpansionFilter() ? 'show' : 'hide' }}">
           @for (exp of expansions(); track `${exp}`) {
             <button
               class="filter-btn expansion {{  cardFilters().expansions.includes(exp) ? 'active' : 'inactive'  }}"
@@ -34,9 +57,54 @@
           }
         </div>
       </div>
+      <div style="position: relative;">
+        <button
+          type="button"
+          (click)="toggleTypeFilter()"
+        >Filter Types</button>
+        <div class="filter-container {{ showTypeFilter() ? 'show' : 'hide' }}">
+          @for (type of types(); track `${type}`) {
+            <button
+              class="filter-btn expansion {{  cardFilters().types.includes(type) ? 'active' : 'inactive'  }}"
+              (click)="addFilter('types',type)"
+            >{{type}}</button>
+          } @empty {
+            <li>There are no items.</li>
+          }
+        </div>
+      </div>
+        <label style="display: flex; flex-direction: row; gap: 1rem; align-items: center;">
+          <span style="font-size: 1em">Min Cost</span>
+          <input
+            (change)="filterHandler()"
+            (click)="closeFilters()"
+            type="number"
+            style="width: 4rem; height: 2rem;"
+            formControlName="minCost"
+            max="{{ costs()[1] }}"
+            min="{{ cardFilters().minCost }}"
+            [value]="cardFilters().minCost"
+          >
+        </label>
+        <label style="display: flex; flex-direction: row; gap: 1rem; align-items: center;">
+          <span style="font-size: 1em">Max Cost</span>
+          <input
+            (change)="filterHandler()"
+            (click)="closeFilters()"
+            type="number"
+            style="width: 4rem; height: 2rem;"
+            formControlName="maxCost"
+            max="{{ cardFilters().maxCost }}"
+            min="{{ costs()[0] }}"
+            [value]="cardFilters().maxCost"
+          >
+        </label>
     </form>
   </div>
   <div class="card-list list">
+    <div class="header">
+      All Cards
+    </div>
     <div class="container">
       @if (filteredCards().length == 0 && cards.isLoading()){
         <div>LOADING</div>
@@ -48,35 +116,27 @@
             path="cards/{{c.path}}"
             expansion="{{c.expansion}}"
             (cardClick)="addCardToDeck(c.name)"
+            size="{{card_size()}}"
           ></plp-card>
         } @empty {
           <li>There are no items.</li>
         }
       }
     </div>
-    <div class="header">
-      Cards /\
-    </div>
   </div>
-  <div class="deck-list list" style="margin-top: 1rem;">
+  <div class="deck-list list" style="margin-top: 1rem; position: relative;">
     <div class="header">
+      <span class="title" style="margin: 0 1rem;">Deck</span>
       <button
         (click)="logDeck()"
       > LOG
       </button>
-      <span class="title" style="margin: 0 1rem;">Deck</span>
-      <input
-        type="number"
-        name="maxCards"
-        value="{{deck().maxCards}}"
-        min="{{deck().cards.length}}"
-        (change)="updateMaxCards($event)"
-        style="width: 50px;"
-      >
       <button
-        (click)="saveDeck()"
-        [disabled]="disableSaving()"
-      >Save</button>
+        (click)="toggleDeckPage()"
+        style="position: absolute; right: 1rem;"
+      >
+        Settings
+      </button>
     </div>
     <div class="container">
       @if (deck().cards.length > 0 && !cards.isLoading()) {
@@ -86,11 +146,107 @@
             path="cards/{{c.path}}"
             expansion="{{c.expansion}}"
             (cardClick)="removeCardFromDeck(c.name)"
+            size="{{card_size()}}"
           ></plp-card>
         } @empty {
           <li>There are no items.</li>
         }
       }
+    </div>
+    <div
+      class="popup {{ showDeckPage() ? 'show' : 'hide' }}"
+      id="deck-popup"
+      title="Deck Settings"
+    >
+      <form
+        (submit)="saveDeck($event)"
+      >
+          <label style="display: flex; align-items: center; gap: 1rem;">
+            <span>Name</span>
+            <input name="name"
+              autocomplete="off"
+              style="width: 100%; padding: 4px;"
+              (input)="updateDeckInfo('name',$event)"
+              [defaultValue]="deck().name"
+            >
+          </label>
+          <div style="display: flex; align-items: center; gap: 1rem;">
+            <span style="width: fit-content;">Max Cards</span>
+            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                <button type="button"
+                  (click)="decrease_card_count(1)"
+                  class="invert"
+                >-</button>
+                <span>{{  deck().maxCards }}</span>
+                <button type="button"
+                  (click)="increase_card_count(1)"
+                  class="invert"
+                >+</button>
+              <button type="button"
+                      (click)="updateMaxCards(10)"
+              >10</button>
+            </div>
+          </div>
+          <div style="display: flex; gap: 1rem; align-items: center;">
+            <span>Mode</span>
+            <button
+              type="button"
+              style="width: fit-content"
+              (click)="toggle_deck_type()"
+            > {{deck_type()}}
+            </button>
+          @if (deck_type() === "Password"){
+            Unlisted, requires password for others to access!
+          }
+          @if (deck_type() === "Public"){
+            Listed, others can access!
+          }
+          @if (deck_type() === "Private"){
+            Unlisted, only you can access!
+          }
+          </div>
+          <br >
+          @if (deck_type() === "Password"){
+            <input
+              autocomplete="username"
+              hidden="hidden"
+            >
+          <label>
+            <span style="margin-right: 1rem;">Deck Password</span>
+            <input
+              placeholder="Set deck password..."
+              (change)="updateDeckInfo('password',$event)"
+              [defaultValue]="password()"
+              type="{{ showPassword() ? 'text' : 'password' }}"
+              autocomplete="new-password"
+            >
+          </label>
+            <button
+              type="button"
+              (click)="toggle_password_view()"
+            >{{ showPassword() ? "Hide" : "Show"}}</button>
+          }
+          <hr />
+
+        <textarea
+          (input)="updateDeckInfo('description',$event)"
+          style="width: 100%; margin-top: 4px; padding: 0.5rem; resize: none;"
+          placeholder="Description"
+        ></textarea>
+
+        <div>
+            <button
+              type="button"
+              (click)="resetDeck()"
+            > RESET
+            </button>
+            <button
+              style="margin-left: 2rem; padding: 0 1rem;"
+              type="submit"
+              [disabled]="disableSaving()"
+            >Save</button>
+        </div>
+      </form>
     </div>
   </div>
 </div>
