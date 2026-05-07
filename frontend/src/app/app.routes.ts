@@ -3,6 +3,7 @@ import { LoginPage } from '../../components/loginpage';
 import { CreatePage } from '../../components/createPage';
 import { DeckPage } from '../../components/deckPage';
 import { DecksPage } from '../../components/decksPage';
+import { AdminPage } from '../../components/adminPage';
 
 export const routes: Routes = [
   {
@@ -20,5 +21,9 @@ export const routes: Routes = [
   {
     path: "decks",
     component: DecksPage
+  },
+  {
+    path: "admin",
+    component: AdminPage
   }
 ];

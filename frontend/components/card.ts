@@ -15,7 +15,7 @@ import {CardType} from './createPage';
       (click)="cardClick.emit()"
     >
       <div
-        class="dom-card-container"
+        class="dom-card-container {{ size() }}"
         style="background-image: url({{ path() }})"
       >
       </div>
@@ -28,6 +28,7 @@ export class Card {
   path = input('path');
   expansion = input('expansion');
   card = input({})
+  size = input('lg');
   cardClick = output<void>();
 
 }
