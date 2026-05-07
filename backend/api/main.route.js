@@ -23,7 +23,7 @@ router.route('/user/decks')
 //      router.route('/user/update')
 //          .put(MainController.apiLogin)
 /*
-    DECK + CARDs
+    DECK + CARDS
  */
 router.route('/cards')
     .get(MainController.apiGetCards)
@@ -38,5 +38,10 @@ router.route('/deck/create')
     // {}
 router.route('/deck/user')
     .get(MainController.apiGetUserDecks)
-// router.route("/token").get(MainController.apiGetLoginToken)
+router.route('/deck/export')
+    .post(MainController.apiExportDeck)
+router.route('/admin/fetch')
+    .get(MainController.apiFetchAdminData)
+router.route('/admin/updateUser')
+    .post(MainController.apiAdminUpdateUser)
 export default router

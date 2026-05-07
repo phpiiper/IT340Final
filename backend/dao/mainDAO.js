@@ -1,11 +1,15 @@
 import bcrypt from "bcrypt";
-
+import fs from "fs/promises";
+import path from "path";
 let cards;
 let users;
 let decks;
+let mfa;
 import mongodb from "mongodb"
 import jwt from "jsonwebtoken";
 const ObjectId = mongodb.ObjectId
+
+const levels = ["Severe", "Warning", "Info"]
 
 export default class MainDAO {
     static async injectDB(conn) {
@@ -14,7 +18,7 @@ export default class MainDAO {
             return
         }
         try {
-            cards = await conn.db(process.env.ATLAS_NAME).collection("cards")
+            cards = await conn.db(process.env.ATLAS_NAME).collection(process.env.CARDS)
         } catch (e) {
             console.error(`unable to connect in MainDAO: ${e}`)
         }
@@ -23,16 +27,25 @@ export default class MainDAO {
             return
         }
         try {
-            users = await conn.db(process.env.ATLAS_NAME).collection("card_users")
+            users = await conn.db(process.env.ATLAS_NAME).collection(process.env.USERS)
         } catch (e) {
             console.error(`unable to connect in MainDAO: ${e}`)
         }
-        // USERS
+        // DECKS
         if (decks) {
             return
         }
         try {
-            decks = await conn.db(process.env.ATLAS_NAME).collection("card_decks")
+            decks = await conn.db(process.env.ATLAS_NAME).collection(process.env.DECKS)
+        } catch (e) {
+            console.error(`unable to connect in MainDAO: ${e}`)
+        }
+        // MFAS
+        if (mfa) {
+            return
+        }
+        try {
+            mfa = await conn.db(process.env.ATLAS_NAME).collection(process.env.MFA)
         } catch (e) {
             console.error(`unable to connect in MainDAO: ${e}`)
         }
@@ -61,8 +74,16 @@ export default class MainDAO {
         return {user}
     }
 
-    static async getUserAuth() {
-
+    static async getUserAuth(cookie) {
+        const verify = jwt.verify(cookie, process.env.JWT_SECRET)
+        if (!verify){
+            return {success: false, error: true, message: "User not authenticated!"}
+        }
+        const {user, error, message} = await this.getUser(verify)
+        if (error){
+            return {success: false, error: true, message}
+        }
+        return {message, success: true, error: false, user}
     }
 
     static async createUser(user) {
@@ -136,13 +157,16 @@ export default class MainDAO {
         }
     }
 
-    static async getUser(userCookie) {
+    static async getUser(userCookie, findUserId) {
         // assume cookie is decoded as object
         try {
             if (typeof userCookie !== "object" && !userCookie?.id) {
                 return {error: true, message: "User not authenticated!"}
             }
             const user = await users.findOne({_id: new ObjectId(userCookie.id)})
+            if (user?.type === "A" && findUserId){
+                await users.findOne({_id: new ObjectId(findUserId)})
+            }
             if (!user) {
                 return {error: true, message: "User doesn't exist!"}
             }
@@ -152,7 +176,8 @@ export default class MainDAO {
         }
     }
 
-    static async getDeck(deckId, password) {
+    static async getDeck(cookies, deckId, password) {
+        const {user, error, message} = await this.getUserAuth(cookies);
         if (!decks) {
             return {error: true, message: "Cannot connect to DB!", deck: null}
         }
@@ -160,13 +185,20 @@ export default class MainDAO {
         if (!deck) {
             return {error: true, message: "Deck doesn't exist!"}
         }
-        if (deck.password) {
+        if (!user && ["Private","Password"].includes(deck.type)){
+            return {error: true, message: "Deck doesn't exist!"}
+        }
+        else if (user?.role === "U" && deck.password && deck.type === "Private") {
             if (!password){ return {error: true, message: "Password required!"}  }
             const pwdMatch = bcrypt.compareSync(password, deck.password)
             if (!pwdMatch) {
                 return {error: true, message: "Password doesn't match!"}
             }
         }
+        else if (user?.role === "U" && deck.type === "Private" && deck.author.toString() !== user._id.toString()) {
+             return {error: true, message: "Deck cannot be accessed!"}
+         }
+         console.log(deck.cards)
         const finCards = await cards.find({_id: {$in: deck.cards.map(x => new ObjectId(x))}}).toArray()
         const finDeck = {...deck, cards: finCards}
         return {deck: finDeck, success: true, error: false, message: "Deck found!"}
@@ -177,7 +209,11 @@ export default class MainDAO {
             if (!decks) {
                 return {error: true, message: "Cannot connect to DB!", deck: null}
             }
-            const {user} = await this.getUser(userCookies);
+            const {user, error, message} = await this.getUserAuth(userCookies);
+
+            if (error){
+                return {error, message, decks: []}
+            }
 
             const userId = user?._id?.toString();
             let allDecks = await decks.find({author: new ObjectId(userId) }).toArray()
@@ -198,10 +234,16 @@ export default class MainDAO {
 
     static async verifyDeck(deck){
         if (!decks){ return {error: true, message: "Cannot connect to DB!"}}
-        const {cards, maxCards, tags, name} = deck
+        const {cards, maxCards, tags, name, type, password} = deck
         if (cards?.length > maxCards){ return {error: true, message: "Deck is too big!"}}
         if (name?.length > 30){ return {error: true, message: "Deck name is too long!"}}
         if (!Array.isArray(tags) || tags.find(x => typeof x !== "string")){ return {error: true, message: "Incorrect tag format! Must be an array of strings."}}
+        if (!["Public","Private","Public"].includes(type)){
+            return {error: true, message: "Incorrect tag type!"}
+        }
+        if (type === "Private" && (!password || password?.length > 3)){
+            return {error: true, message: "Invalid deck password! Must be at least 3 characters long!"}
+        }
         // CHECK CARDS
         // ???
 
@@ -220,12 +262,15 @@ export default class MainDAO {
                 - maxCards -- int max of cards
                 - tags[] -- string of user-defined tags
                 - name -- string name
+
+                - description
+                - mode
              */
-            const {cards, maxCards, tags, name, password} = deck
+            const {cards, maxCards, tags, name, password, type} = deck
             const {error, message} = await this.verifyDeck(deck)
             if (error){return {error: true, message}}
             let hashedPassword = null
-            if (password){
+            if (type === "Private" && password){
                 hashedPassword = bcrypt.hashSync(password, 10)
             }
             const deckId = new ObjectId()
@@ -236,7 +281,8 @@ export default class MainDAO {
                 maxCards,
                 tags,
                 name,
-                password: hashedPassword
+                password: hashedPassword,
+                type: type
             })
             return {success: true, error: false, message: "Deck created!", deckId}
         } catch (e) {
@@ -244,5 +290,158 @@ export default class MainDAO {
         }
     }
 
+    static async copyDeck(cookie, deckID,password){
+        // CHECK FOR PERMS
+        const {deck, user, error, message} = await this.getDeck(cookie,deckID,password)
+        if (error){return {error: true, message}}
+        // COPY VARIABLES
+        // name (Copy Of), cards, maxCards, tags, type=Private
+        const newDeck = {...deck,
+            name: "Copy of " + deck.name,
+            type: "Private",
+            author: user.id,
+            password: null, _id: null
+        }
+        await this.createDeck(user.id, newDeck)
+        return {success: true, error: false, message: "Copied deck!"}
+    }
 
+    static async exportDeck(cookie, deckID, password){
+        // CHECK FOR PERMS
+        const {deck, user, error, message} = await this.getDeck(cookie,deckID,password)
+        if (error){return {error: true, message}}
+        // Create text file
+        return {success: true, error: false, message: "Deck exported!", deck}
+    }
+
+    static async importDeck(cookie, importFile){
+        // CHECK COOKIE (get user)
+        // CHECK IMPORT FILE STRUCT
+            // IS JSON
+            // HAS PROPER FIELDS
+        // THEN createDeck()
+        return {success: true, error: false, message: "Deck exported!", data: blob}
+
+    }
+
+    /*
+        2FA --- email
+        sendCode
+        verifyCode
+     */
+    static async sendCode(cookie) {
+        // CHECK COOKIE
+        const {error, message, user} = await this.getUserAuth(cookie);
+        if (error){
+            return {error, message}
+        }
+        // GENERATE CODE
+        const code = Math.random().toString(16).substring(6,12).toUpperCase()
+        const hashedCode = bcrypt.hashSync(code, 10)
+        // EXPIRE ALL OTHER CODES BY USER
+        mfa.updateMany({
+            user: user.id
+        },
+        {
+            $set: { expires_at: Date.now() }
+        })
+        // INSERT INTO MONGO DB
+        const codeInsert = mfa.insertOne({
+            created_at: new Date().toISOString(),
+            expires_at: new Date().toISOString(),
+            user: user.id,
+            code: hashedCode
+        })
+
+        try {
+            // <SEND CODE> | reuse whatever in coldfusion
+            const req = await fetch("https://api.brevo.com/v3/smtp/email", {
+                method: "POST",
+                headers: {
+                    accept: "application/json",
+                    "api-key": process.env.BREVO_API_KEY,
+                },
+                body: JSON.stringify({
+                    sender: {
+                        name: "DOM Picker",
+                        email: process.env.BREVO_EMAIL
+                    },
+                    to: [{
+                        email: user.email
+                    }],
+                    subject: "2FA Request",
+                    htmlContent: `<html><head></head><body>
+<p>Hello, ${user.name}</p><p>This is a 2FA request for Dominion Picker. To sign in, use the code [ <strong> ${code} </strong> ] to sign in.</p></body></html>`
+                })
+            })
+            if (!req.ok) {
+                console.error(req)
+                return {error: true, message: "Error in sending message", req}
+            }
+        } catch (e) {
+            mfa.updateOne({
+                _id: codeInsert.id
+            }, {
+               $set: { expires_at: Date.now() }
+            })
+            return {error: true, message: e.message}
+        }
+
+        return {success: true, error: false, message: `Email sent to ${user.id}!`}
+    }
+    static async verifyCode(cookie,code){
+        // CHECK USER
+        // GET USER CODE
+        // COMPARE 'code' to userCode --- like password
+        // IF CORRECT, expire code AND return true
+    }
+
+
+    /*
+            ADMIN APIs
+     */
+
+     static async adminGetUsers(user){
+        if (!user || user?.role !== "A") {return {error: true, message: "Unauthorized..!"}}
+        const agu = users.find({role: "U"}).toArray()
+        //await decks.find({author: new ObjectId(userId) }).toArray()
+        return {success: true, error: false, message: "Fetched users!", users: agu};
+     }
+     // admin/fetchLog
+     static async adminGetLogs(user){
+         if (!user || user?.role !== "A") {return {error: true, message: "Unauthorized...!"}}
+        try {
+            const logFile = path.join(process.cwd(), "logs", "log.jsonl")
+            const data = await fs.readFile(logFile, "utf8")
+            const logs = data.split("\n").filter((line) => line.trim() !== "").map((line, index) => {
+                const l = JSON.parse(line)
+                return {...l,
+                    id: index,
+                    date: new Date(l.date).toLocaleString(),
+                    level: levels[l.level]
+                }
+            }).reverse()
+            return {success: true, message: "Fetched logs successfully!", logs}
+        } catch (e){
+            console.error("Cannot fetch logs!",e)
+            return {error: true, message: e.message || "Unknown error..."}
+        }
+     }
+
+    static async log(level, api, action, description){
+        try {
+            const logsDir = path.join(process.cwd(), "logs")
+            const logFile = path.join(logsDir, "log.jsonl")
+            await fs.mkdir(logsDir, {recursive: true})
+
+            const date = new Date().toISOString()
+            const logEntry = {
+                level, api, action, description, date
+            }
+
+            await fs.appendFile(logFile, JSON.stringify(logEntry) + "\n", "utf8");
+        } catch (e){
+            console.error("Failed to write to log: ", e)
+        }
+    }
 }
