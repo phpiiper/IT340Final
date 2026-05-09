@@ -93,7 +93,7 @@ export class DecksPage implements OnInit{
   }
   async copyDeck(id: string, password: string){
       try {
-        const res = await fetch(`http://localhost:3000/api/deck/copy`,{
+        const res = await fetch(`${environment.backend}/api/deck/copy`,{
           method: 'POST',
           credentials: "include",
           headers: {"Content-Type": "application/json" },
@@ -119,7 +119,7 @@ export class DecksPage implements OnInit{
 
   async exportDeck(id: string){
       try {
-        const res = await fetch(`http://localhost:3000/api/deck/export`,{
+        const res = await fetch(`${environment.backend}/api/deck/export`,{
           method: 'POST',
           credentials: "include",
           headers: {"Content-Type": "application/json" },
@@ -157,7 +157,7 @@ export class DecksPage implements OnInit{
         const json = JSON.parse(text)
         console.log(json)
         // backend handles logical structure (just ensuring here that json is the only thing sent)
-        const res = await fetch(`http://localhost:3000/api/deck/import`,{
+        const res = await fetch(`${environment.backend}/api/deck/import`,{
           method: 'POST',
           credentials: "include",
           headers: {
@@ -182,7 +182,7 @@ export class DecksPage implements OnInit{
       if (!deck) {return}
       if (!["delete"].includes(method)){return}
       try {
-        const res = await fetch(`http://localhost:3000/api/deck/update`,{
+        const res = await fetch(`${environment.backend}/api/deck/update`,{
           method: 'POST',
           credentials: "include",
           headers: {

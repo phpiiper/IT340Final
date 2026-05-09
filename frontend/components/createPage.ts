@@ -259,7 +259,7 @@ export class CreatePage implements OnInit{
     console.log(this.deck())
     this.disableSaving.set(true)
     let finDeck:any = this.deck()
-    fetch("http://localhost:3000/api/deck/create",{
+    fetch(`${environment.backend}/api/deck/create`,{
       method: "POST",
       body: JSON.stringify(finDeck),
       headers: { "Content-Type": "application/json" },
@@ -278,7 +278,7 @@ export class CreatePage implements OnInit{
   }
 
   async logout(){
-    const r = await fetch("http://localhost:3000/api/auth/signOut",{
+    const r = await fetch(`${environment.backend}/api/auth/signOut`,{
       credentials: "include",
     })
     // console.log(await r.json())
@@ -363,7 +363,7 @@ export class CreatePage implements OnInit{
     message: new FormControl('Generate a deck by selecting two cards at random and create the deck around their abilities/types.', Validators.required)
   });
   async generateDeck(message: string){
-      const r = await fetch("http://localhost:3000/api/ai/deck",{
+      const r = await fetch(`${environment.backend}/api/ai/deck`,{
         credentials: "include",
         method: "POST",
         headers: { "Content-Type": "application/json" },
