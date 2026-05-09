@@ -113,7 +113,7 @@ export class CreatePage implements OnInit{
       try {
         const res = await fetch(`http://localhost:3000/api/cards?&itemsPerPage=351`);
         const data = await res.json();
-        console.log(data?.cards);
+        // console.log(data?.cards);
         return data?.cards || []
       } catch (e){
         console.log(e)
@@ -157,7 +157,7 @@ export class CreatePage implements OnInit{
       //
       // @ts-ignore
       // 4. Check if in deck
-      if (this.deck().cards.some(d => d._id === x._id)) {return false}
+      if (this.deck().cards.some(d => (d?._id || d) === x._id)) {return false}
       // 5. Check for MAX and MIN costs
 
       if (x.cost > this.cardFilters().maxCost || x.cost < this.cardFilters().minCost) {return false}
@@ -168,6 +168,7 @@ export class CreatePage implements OnInit{
   });
 
   addCardToDeck(name: string){
+    if (this.runningAI() || this.disableSaving()) {return}
     const found = this.cards.value().find((x: any) => x.name === name)
     if (!found) {return}
     if (this.deck().cards.length >= this.deck().maxCards) {return}
@@ -178,6 +179,7 @@ export class CreatePage implements OnInit{
     // console.log(this.deck())
   }
   removeCardFromDeck(name: string){
+    if (this.runningAI() || this.disableSaving()) {return}
     this.deck.update((prev: any) => ({
       ...prev, cards: prev.cards.filter((x: any) => x.name !== name)
     }))
@@ -283,7 +285,8 @@ export class CreatePage implements OnInit{
   }
 
   logDeck(){
-    console.log(62, this.deck())
+    console.log("Current Deck", this.deck())
+    console.log("All Cards", this.cards.value())
   }
   resetDeck(){
     this.deck.set({
@@ -350,6 +353,54 @@ export class CreatePage implements OnInit{
           [type]: value || ""
         }))
     }
+  }
+
+  runningAI = signal(false)
+  showPromptPopup = signal(false)
+  toggleShowPromptPopup() { this.showPromptPopup.update(x => !x) }
+  promptForm = new FormGroup({
+    message: new FormControl('Generate a deck by selecting two cards at random and create the deck around their abilities/types.', Validators.required)
+  });
+  async generateDeck(message: string){
+      const r = await fetch("http://localhost:3000/api/ai/deck",{
+        credentials: "include",
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message
+        })
+      })
+      if (r.ok){
+          let dt = await r.json()
+          if (dt.error) {
+            console.log("ERR 2",dt.message)
+          } else {
+            return dt.message // OBJ
+          }
+      } else {
+        console.log("ERR", r)
+      }
+  }
+  async generateDeckHandler(event: Event){
+      event.preventDefault()
+      try {
+          this.runningAI.set(true)
+          const res = await this.generateDeck(this.promptForm.value.message || "")
+          console.log(res)
+          const mappedCards = Array.isArray(res?.cards) ? (
+              res.cards.map((x:any) => this.cards.value().find((y:any) => y._id === x))
+          ) : []
+          this.deck.update(x => x = {...x,
+              cards: mappedCards,
+              maxCards: res.maxCards,
+              name: res.name,
+              tags: res.tags,
+          })
+      } catch (e){
+        console.log(e)
+      } finally {
+        this.runningAI.set(false)
+      }
   }
 
 }
