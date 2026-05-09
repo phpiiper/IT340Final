@@ -9,6 +9,7 @@ import {MatInputModule} from '@angular/material/input';
 import {MatTabsModule} from '@angular/material/tabs';
 import {MatExpansionModule} from '@angular/material/expansion';
 import {FormControl, FormGroup, ReactiveFormsModule, Validators} from '@angular/forms';
+import {environment} from '../src/environments/environment';
 
 
 
@@ -38,7 +39,7 @@ export class LoginPage implements OnInit{
     const signInObj = this.profileForm.value;
     if (tab === 0){
       // LOG IN
-      const res = await fetch("http://localhost:3000/api/auth/login",{
+      const res = await fetch(`${environment.backend}/api/auth/login`,{
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -57,7 +58,7 @@ export class LoginPage implements OnInit{
     } else if (tab === 1){
       // SIGN UP
       console.log("SIGN UP",signInObj)
-      const res = await fetch("http://localhost:3000/api/auth/register",{
+      const res = await fetch(`${environment.backend}/api/auth/register`,{
         method: "POST",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify(signInObj)
@@ -84,7 +85,7 @@ export class LoginPage implements OnInit{
     email: new FormControl('plp@njit.edu', Validators.required),
   });
   async fetchUser(){
-    const res = await fetch("http://localhost:3000/api/auth/checkLogin",{
+    const res = await fetch(`${environment.backend}/api/auth/checkLogin`,{
       credentials: "include",
     });
     return await res.json();

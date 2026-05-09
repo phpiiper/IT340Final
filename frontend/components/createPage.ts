@@ -9,6 +9,7 @@ import {MatTabsModule} from '@angular/material/tabs';
 import {MatExpansionModule} from '@angular/material/expansion';
 import {FormControl, FormGroup, ReactiveFormsModule, Validators} from '@angular/forms';
 import {Card} from './card';
+import {environment} from '../src/environments/environment';
 
 export interface CardType {
   _id: string;
@@ -59,7 +60,7 @@ export class CreatePage implements OnInit{
   }
 
   async fetchUser(){
-    const res = await fetch("http://localhost:3000/api/auth/checkLogin",{
+    const res = await fetch(`${environment.backend}/api/auth/checkLogin`,{
       credentials: "include",
     });
     return await res.json();
@@ -111,7 +112,7 @@ export class CreatePage implements OnInit{
   cards = resource({
     loader: async ()=>{
       try {
-        const res = await fetch(`http://localhost:3000/api/cards?&itemsPerPage=351`);
+        const res = await fetch(`${environment.backend}/api/cards?&itemsPerPage=351`);
         const data = await res.json();
         // console.log(data?.cards);
         return data?.cards || []

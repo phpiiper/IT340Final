@@ -4,6 +4,7 @@ import {Card} from './card';
 import {FormGroup, FormControl, Validators, ReactiveFormsModule} from '@angular/forms';
 import {MatIcon} from '@angular/material/icon';
 import {CardType} from './createPage';
+import {environment} from '../src/environments/environment';
 
 export interface DeckType {
   _id: string;
@@ -33,7 +34,7 @@ export class DecksPage implements OnInit{
   async fetchDecks(){
     this.loading.set(true);
 
-    const res = await fetch("http://localhost:3000/api/deck/user",{
+    const res = await fetch(`${environment.backend}/api/deck/user`,{
       credentials: "include",
       headers: { "Content-Type": "application/json" },
     });
@@ -73,7 +74,7 @@ export class DecksPage implements OnInit{
 
 
   async logout(){
-    const r = await fetch("http://localhost:3000/api/auth/signOut",{
+    await fetch(`${environment.backend}/api/auth/signOut`,{
       credentials: "include",
     })
     // console.log(await r.json())
