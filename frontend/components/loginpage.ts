@@ -28,12 +28,12 @@ export class LoginPage implements OnInit{
         } else {
           console.log("LOGIN!")
         }
-        console.log(res)
     })
   }
 
   tab = signal(0);
   swapTab = (tab: number) => this.tab.set(tab);
+  loginError = signal("");
 
   async loginPageHandler(tab: number) {
     const signInObj = this.profileForm.value;
@@ -50,9 +50,11 @@ export class LoginPage implements OnInit{
       });
       const js = await res.json();
       if (js.success){
-        await this.router.navigate(['/create'])
+        // await this.router.navigate(['/create'])
+        console.log("SUCCESS! go to verify code screen")
+        this.tab.set(2)
       } else {
-        console.log("WRONG PASSWORD!")
+        console.log("Error: ", js.message)
       }
       return
     } else if (tab === 1){
@@ -81,7 +83,7 @@ export class LoginPage implements OnInit{
   }
   profileForm = new FormGroup({
     username: new FormControl('phpiiper', Validators.required),
-    password: new FormControl('@76363739s', Validators.required),
+    password: new FormControl('@Spirit39s', Validators.required),
     email: new FormControl('plp@njit.edu', Validators.required),
   });
   async fetchUser(){
@@ -93,5 +95,30 @@ export class LoginPage implements OnInit{
   signUpError = signal({
     error: false, message: ""
   });
+
+
+  // VERIFY
+  verifyForm = new FormGroup({
+    code: new FormControl('', Validators.required),
+    // 642AA8
+  });
+  async verifyHandler(event: Event){
+    event.preventDefault();
+    const code = this.verifyForm.value.code
+    const {email, password} = this.profileForm.value
+    const res = await fetch(`${environment.backend}/api/auth/verify`,{
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      credentials: "include",
+      body: JSON.stringify({
+          code, email , password
+      })
+    });
+    if (!res.ok){return console.log("Error: ", res)}
+    const d = await res.json();
+    if (d.error) {return console.log("ERR: ",d.message)}
+    console.log("VERIFIED!")
+    await this.router.navigate(['/create'])
+  }
 
 }

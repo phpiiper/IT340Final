@@ -32,51 +32,72 @@ export default class MainController {
         res.json(response)
     }
     // AUTH TOOLS
-    static async apiLogin(req,res,next) {
+    /*
+        new login...
+     */
+     static async apiNewLogin(req, res, next){
         try {
-            await mainDAO.log(3, "apiLogin", "Called API", "")
-            // CHECK FOR INFO
+            await mainDAO.log(3, "apiNewLogin", "Called API", "")
+            // get user
             const {error, message, user} = await mainDAO.getUserByPassword(req?.body?.email, req?.body?.password)
             if (error){
                 return res.json({success: false, error: true, message})
             }
-            // CREATE COOKIE
-            const jwtToken = jwt.sign(
-                {
-                    id: user._id,
-                    username: user.username,
-                    role: user.role,
-                },
-                process.env.JWT_SECRET,
-                {
-                    algorithm: "HS256",
-                    expiresIn: '4h'
-                })
-            // set cookie
-            res.cookie(process.env.COOKIE_NAME, jwtToken, {
-                httpOnly: true,
-                secure: false,
-                sameSite: "lax",
-                maxAge: 14400000
-            })
-            // return response
-            await mainDAO.log(3, "apiLogin", "Successful log in", `Called by user ${user._id}`)
-            res.json({
-                success: true, error: false,
-                message: "Login successful!",
-                token: jwtToken,
-                user
-            })
-        } catch(e) {
-            await mainDAO.log(1, "apiLogin", "Catch Error", e.message)
+            // then send code
+            const {error: scError, message: scMessage} = await mainDAO.sendCode(user)
+            if (scError){ return res.json({success: false, error: true, message: scMessage}) }
+
+            return res.json({success: true, error: false, message: "Successfully sent code to user!"})
+        } catch (e){
+            await mainDAO.log(1, "apiNewLogin", "Catch Error", e.message)
             res.json({success: false, error: true, message: e})
         }
-    }
+     }
+     static async apiVerifyLogin(req, res, next){
+         try {
+            // re-verify user
+             await mainDAO.log(3, "apiVerifyLogin", "Called API", "")
+             const {email, password, code} = req?.body
+             if (!email || !password || !code) { return res.json({success: false, error: true, message: "Missing keys in payload!"}) }
+
+             const {error, message, user} = await mainDAO.getUserByPassword(email, password)
+             if (error){ return res.json({success: false, error: true, message}) }
+             // check for valid request
+             const {error: vcError, message: vcMessage} = await mainDAO.verifyCode(user, code)
+             if (vcError) { return res.json({success: false, error: true, message: vcMessage}) }
+
+             // now create cookie
+             const jwtToken = jwt.sign(
+                 {
+                     id: user._id,
+                     username: user.username,
+                     role: user.role,
+                 },
+                 process.env.JWT_SECRET,
+                 {
+                     algorithm: "HS256",
+                     expiresIn: '4h'
+                 })
+             // set cookie
+             res.cookie(process.env.COOKIE_NAME, jwtToken, {
+                 httpOnly: true,
+                 secure: false,
+                 sameSite: "lax",
+                 maxAge: 14400000
+             })
+
+             await mainDAO.log(3, "apiVerifyLogin", "Successful MFA verified  user", `Called by user ${user._id}`)
+             return res.json({success: true, error: false, message: "Successfully verified user!"})
+         } catch (e){
+             await mainDAO.log(1, "apiVerifyLogin", "Catch Error", e.message)
+             res.json({success: false, error: true, message: e})
+         }
+     }
     static async apiCheckLogin(req,res,next) {
         //
         try {
             const verify = jwt.verify(req.cookies[process.env.COOKIE_NAME], process.env.JWT_SECRET)
-            await mainDAO.log(3, "apiCheckLogin", "Successful Get of Login", `Called by user ${verify._id}`)
+            await mainDAO.log(3, "apiCheckLogin", "Successful Get of Login Info", `Called by user ${verify.id}`)
             let response = {
                 res: "logIn",
                 verify: verify,

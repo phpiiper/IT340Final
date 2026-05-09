@@ -423,27 +423,24 @@ export default class MainDAO {
         sendCode
         verifyCode
      */
-    static async sendCode(cookie) {
-        // CHECK COOKIE
-        const {error, message, user} = await this.getUserAuth(cookie);
-        if (error){
-            return {error, message}
-        }
+    static async sendCode(user) {
+        // check user
+        if (!user || !user._id) {return {success: false, error: true, message: "Missing user!"}}
         // GENERATE CODE
         const code = Math.random().toString(16).substring(6,12).toUpperCase()
         const hashedCode = bcrypt.hashSync(code, 10)
         // EXPIRE ALL OTHER CODES BY USER
-        mfa.updateMany({
-            user: user.id
+        await mfa.updateMany({
+            user: user._id
         },
         {
-            $set: { expires_at: Date.now() }
+            $set: { expires_at: new Date(Date.now()).toISOString() }
         })
         // INSERT INTO MONGO DB
-        const codeInsert = mfa.insertOne({
+        const codeInsert = await mfa.insertOne({
             created_at: new Date().toISOString(),
-            expires_at: new Date().toISOString(),
-            user: user.id,
+            expires_at: new Date(new Date().getTime() + 30*60000).toISOString(),
+            user: user._id,
             code: hashedCode
         })
 
@@ -454,6 +451,7 @@ export default class MainDAO {
                 headers: {
                     accept: "application/json",
                     "api-key": process.env.BREVO_API_KEY,
+                    "content-type": "application/json",
                 },
                 body: JSON.stringify({
                     sender: {
@@ -465,7 +463,7 @@ export default class MainDAO {
                     }],
                     subject: "2FA Request",
                     htmlContent: `<html><head></head><body>
-<p>Hello, ${user.name}</p><p>This is a 2FA request for Dominion Picker. To sign in, use the code [ <strong> ${code} </strong> ] to sign in.</p></body></html>`
+<p>Hello, ${user.username}</p><p>This is a 2FA request for Dominion Deck Builder (DDB). To sign in, use the code [ <strong> ${code} </strong> ] to sign in.</p></body></html>`
                 })
             })
             if (!req.ok) {
@@ -473,21 +471,42 @@ export default class MainDAO {
                 return {error: true, message: "Error in sending message", req}
             }
         } catch (e) {
-            mfa.updateOne({
+            // if err in (mainly message handling), ensure code expires (might be redundant...?)
+            await mfa.updateOne({
                 _id: codeInsert.id
             }, {
-               $set: { expires_at: Date.now() }
+               $set: { expires_at: new Date().toISOString() }
             })
             return {error: true, message: e.message}
         }
 
         return {success: true, error: false, message: `Email sent to ${user.id}!`}
     }
-    static async verifyCode(cookie,code){
+    static async verifyCode(user,code){
         // CHECK USER
+        if (!user || !user._id) {return {success: false, error: true, message: "Missing user!"}}
+        if (!code) {return {success: false, error: true, message: "Missing code!"}}
         // GET USER CODE
+        const found = await mfa.findOne({
+                user: user._id,
+                expires_at: { $gt: new Date().toISOString() }
+        })
         // COMPARE 'code' to userCode --- like password
+        if (!found) {return {success: false, error: true, message: "No valid code was sent for user!"}}
+        let match = bcrypt.compareSync(code, found.code)
+        if (!match) {
+            return {error: true, success: false, message: "Code doesn't match!"}
+        }
         // IF CORRECT, expire code AND return true
+            // EXPIRE
+            /*
+            await mfa.updateOne({
+                _id: found._id
+            }, {
+               $set: { expires_at: new Date().toISOString() }
+            })
+             */
+         return {error: false, success: true, message: "Code is validated!"}
     }
 
 
@@ -640,8 +659,9 @@ export default class MainDAO {
          });
          let res;
          try {
-             res = JSON.parse(response?.output_text);
-             res = res.deck
+
+                res = JSON.parse(response?.output_text);
+                res = res.deck
          } catch (e){
                 console.log(e, response?.output_text);
              return {success: false, error: true, message: `Could not parse response.`}
