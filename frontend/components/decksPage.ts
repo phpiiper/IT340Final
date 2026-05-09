@@ -24,6 +24,7 @@ export class DecksPage implements OnInit{
   constructor(private router: Router){}
   loading = signal(true);
   decks = signal<DeckType[]>([])
+  loggedIn = signal(false);
 
   ngOnInit(){
     this.fetchDecks().then(res => {
@@ -41,9 +42,12 @@ export class DecksPage implements OnInit{
     const data = await res.json();
     console.log(32, data)
     if (data.error){
+      // assume not logged in
         console.log("other err :: ",data.message)
+        window.location.href = `/`
     } else {
       this.decks.set(data.decks)
+      this.loggedIn.set(true);
       console.log(data.decks)
     }
     this.loading.set(false)

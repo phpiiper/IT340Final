@@ -19,8 +19,6 @@ app.options(/.*/,cors({
     credentials: true
 }))
 
-console.log(process.env.FRONTEND_URL)
-
 app.use(express.json())
 app.use(cookieParser())
 app.use("/api",mainRoute)

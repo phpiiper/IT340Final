@@ -52,6 +52,8 @@ export class AdminPage implements OnInit{
     console.log(44,data)
     if (data.error){
       console.log("other err :: ",data.message)
+      // assume not logged in (or authed)
+      window.location.href = `/`
     } else {
       this.adminData.set(data)
       this.canAccess.set(true)

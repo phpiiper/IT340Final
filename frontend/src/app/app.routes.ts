@@ -5,6 +5,7 @@ import { DeckPage } from '../../components/deckPage';
 import { DecksPage } from '../../components/decksPage';
 import { AdminPage } from '../../components/adminPage';
 import { AccountPage } from '../../components/accountPage';
+import { PageNotFound } from '../../components/pageNotFoundPage';
 
 export const routes: Routes = [
   {
@@ -30,5 +31,9 @@ export const routes: Routes = [
   {
     path: "account",
     component: AccountPage
+  },
+  {
+    path: "**",
+    component: PageNotFound
   }
 ];

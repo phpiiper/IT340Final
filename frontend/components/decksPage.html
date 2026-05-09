@@ -6,7 +6,7 @@
     <a href="/decks"><button>
       <mat-icon>book</mat-icon>
     </button></a>
-    <span class="title">DDM</span>
+    <span class="title">DDB</span>
     <button (click)="logout()" id="logout">
       <mat-icon>logout</mat-icon>
     </button>
@@ -18,7 +18,10 @@
   <div class="body">
     @if (loading()){
       <h2>Loading...</h2>
-    } @else {
+    } @else if (!loggedIn()) {
+      <h2>Must Be Logged In!</h2>
+      <a href="/">Go Back!</a>
+    }@else {
       <br>
       <h2>My Decks</h2>
       <br>

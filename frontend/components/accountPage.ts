@@ -50,9 +50,14 @@ export class AccountPage {
             email: user.email,
             password: ""
           })
+      } else {
+        //assume not logged in
+        window.location.href = `/`
       }
     } catch(err) {
       console.log(err)
+      // assume not logged in
+      window.location.href = `/`
     }
     this.fetching.set(false);
   }
