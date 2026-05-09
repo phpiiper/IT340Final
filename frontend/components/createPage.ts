@@ -134,14 +134,17 @@ export class CreatePage implements OnInit{
     const c = this.cards.value() ?? [];
     return [...new Set<string>(c.map((x: CardType) => x.types).flatMap((x:any) => x))]
   });
-  deck = signal<DeckType>({
+
+  defaultDeck = {
     name: "Deck",
     type: "Public",
     cards: [],
     description: "",
     maxCards: 10,
-    tags: []
-  })
+    tags: [],
+  }
+
+  deck = signal<DeckType>(this.defaultDeck)
 
   filteredCards = computed(() => {
     const c = this.cards.value() || [];
@@ -256,6 +259,7 @@ export class CreatePage implements OnInit{
   disableSaving = signal(false)
   saveDeck(event:Event){
     event.preventDefault();
+    if (this.runningAI()){return}
     console.log(this.deck())
     this.disableSaving.set(true)
     let finDeck:any = this.deck()
@@ -290,16 +294,11 @@ export class CreatePage implements OnInit{
     console.log("All Cards", this.cards.value())
   }
   resetDeck(){
-    this.deck.set({
-      name: "Deck",
-      type: "Public",
-      cards: [],
-      description: "",
-      maxCards: 10,
-      tags: []
-    })
+    if (this.runningAI() || this.disableSaving()){return}
+    this.deck.set(this.defaultDeck)
   }
   updateMaxCards(int:number){
+    if (this.runningAI() || this.disableSaving()){return}
     this.deck.update((prev: any) => ({
       ...prev, maxCards: int
     }))
@@ -310,6 +309,7 @@ export class CreatePage implements OnInit{
     }
   }
   decrease_card_count(int:number) {
+    if (this.runningAI() || this.disableSaving()){return}
     const newAmt = this.deck().maxCards - int;
     if (newAmt !== 0 && newAmt >= this.deck().cards.length){
       this.deck.update((prev: any) => ({
@@ -318,6 +318,7 @@ export class CreatePage implements OnInit{
     }
   }
   increase_card_count(int:number) {
+    if (this.runningAI() || this.disableSaving()){return}
     const newAmt = this.deck().maxCards + int;
     this.deck.update((prev: any) => ({
       ...prev, maxCards: newAmt
@@ -326,6 +327,7 @@ export class CreatePage implements OnInit{
 
   deck_type = signal("Public")
   toggle_deck_type(){
+    if (this.runningAI() || this.disableSaving()){return}
     let options = ["Public", "Private", "Password"]
     let i_ind = options.findIndex(x => x === this.deck_type()) + 1
     if (i_ind === options.length) {i_ind = 0}
@@ -347,12 +349,24 @@ export class CreatePage implements OnInit{
   }
 
   updateDeckInfo(type:string, event:any){
+    if (this.runningAI() || this.disableSaving()){return}
     if (["name","description","type","password"].includes(type)){
         let value = typeof event === "object" && event?.target ? (event.target as HTMLInputElement).value : event;
         this.deck.update(x => ({
           ...x,
           [type]: value || ""
         }))
+    }
+    if (type === "tags"){
+      let value = typeof event === "object" && event?.target ? (event.target as HTMLInputElement).value : event;
+      // if input is direct...
+      if (Array.isArray(value) && value.length > 0 && !value.find(x => typeof x !== "string")) {
+        this.deck.update(x => ({ ...x, tags: value || [] }))
+      } else if (typeof value === "string" && value.replaceAll(" ","").length > 0){
+          // if string
+        this.deck.update(x => ({ ...x, tags: value.split(",").map(t => t.replaceAll(" ","")) || [] }))
+
+      }
     }
   }
 
@@ -363,6 +377,7 @@ export class CreatePage implements OnInit{
     message: new FormControl('Generate a deck by selecting two cards at random and create the deck around their abilities/types.', Validators.required)
   });
   async generateDeck(message: string){
+      if (this.disableSaving()){return false}
       const r = await fetch(`${environment.backend}/api/ai/deck`,{
         credentials: "include",
         method: "POST",
@@ -371,6 +386,7 @@ export class CreatePage implements OnInit{
           message
         })
       })
+      console.log(r)
       if (r.ok){
           let dt = await r.json()
           if (dt.error) {
@@ -379,7 +395,7 @@ export class CreatePage implements OnInit{
             return dt.message // OBJ
           }
       } else {
-        console.log("ERR", r)
+        console.log("gd ERROR", r)
       }
   }
   async generateDeckHandler(event: Event){
@@ -387,7 +403,11 @@ export class CreatePage implements OnInit{
       try {
           this.runningAI.set(true)
           const res = await this.generateDeck(this.promptForm.value.message || "")
-          console.log(res)
+        console.log(res)
+          if (!res) {
+            console.log("ERR")
+            return
+          }
           const mappedCards = Array.isArray(res?.cards) ? (
               res.cards.map((x:any) => this.cards.value().find((y:any) => y._id === x))
           ) : []
@@ -397,6 +417,7 @@ export class CreatePage implements OnInit{
               name: res.name,
               tags: res.tags,
           })
+          this.showPromptPopup.set(false)
       } catch (e){
         console.log(e)
       } finally {

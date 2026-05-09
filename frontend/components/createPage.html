@@ -13,7 +13,7 @@
         <mat-icon>square</mat-icon>
       </button></a>
     }
-    <span class="title">DDM</span>
+    <span class="title">DDB</span>
     <button (click)="logout()" id="logout">
       <mat-icon>logout</mat-icon>
     </button>
@@ -230,8 +230,14 @@
               (click)="toggle_password_view()"
             >{{ showPassword() ? "Hide" : "Show"}}</button>
           }
+        <label>
+          <span style="margin-right: 1rem;">Tags (comma separated)</span>
+          <input
+              [defaultValue]="deck().tags"
+              (input)="updateDeckInfo('tags',$event)"
+          />
+        </label>
           <hr />
-
         <textarea
           (input)="updateDeckInfo('description',$event)"
           style="width: 100%; margin-top: 4px; padding: 0.5rem; resize: none;"
@@ -242,6 +248,7 @@
             <button
               type="button"
               (click)="resetDeck()"
+              [disabled]="disableSaving() || runningAI()"
             > RESET
             </button>
             <button
