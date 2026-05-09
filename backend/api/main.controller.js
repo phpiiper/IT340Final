@@ -55,8 +55,8 @@ export default class MainController {
             // set cookie
             res.cookie(process.env.COOKIE_NAME, jwtToken, {
                 httpOnly: true,
-                secure: process.env.NODE_ENV === "production",
-                sameSite: "strict",
+                secure: false,
+                sameSite: "lax",
                 maxAge: 14400000
             })
             // return response
