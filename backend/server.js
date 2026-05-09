@@ -5,13 +5,24 @@ import cookieParser from 'cookie-parser'
 import cors from 'cors'
 const app = express();
 dotenv.config()
+const allowedOrigin = process.env.FRONTEND_URL;
 
-app.use(express.json());
-app.use(cookieParser());
 app.use(cors({
     origin: process.env.FRONTEND_URL,
-    credentials: true
+    credentials: true,
+    methods: ["GET","POST","OPTIONS"],
+    allowedHeaders: ["Content-Type","Authorization"]
  }));
-app.use('/api', mainRoute);
+
+app.options(/.*/,cors({
+    origin: allowedOrigin,
+    credentials: true
+}))
+
+console.log(process.env.FRONTEND_URL)
+
+app.use(express.json())
+app.use(cookieParser())
+app.use("/api",mainRoute)
 
 export default app;
