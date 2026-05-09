@@ -14,30 +14,35 @@
         type="button"
         (click)="setTab(1)"
         class="tab-btn {{ tab() === 1 ? 'active' : '' }}">Logs</button>
-      <button class="end-btn">BACK</button>
+        <button class="end-btn"><a href="/">BACK</a></button>
   </div>
   <div class="content">
     @if (tab() === 0){
+      <form
+        [formGroup]="userForm"
+      >
         <label>
             <span>Pick User</span>
-            <select>
-              <option value="user1">User1</option>
-              <option value="user2">User2</option>
-              <option value="user3">User3</option>
+            <select
+               (change)="changeUser($event)"
+            >
+              <option value="None">None</option>
+              @for (user of users(); track `${user._id}`;) {
+                <option value="{{ user._id }}">{{user.username}}</option>
+              }
             </select>
         </label>
         <div style="display: flex; align-items: center; gap: 0.5rem; width: 100%; flex-wrap: wrap;">
             <label>
               <span>ID</span>
               <input
-                value="123456789"
-                disabled
+                formControlName="id"
               />
             </label>
             <label>
-              <span>Name</span>
+              <span>Username</span>
               <input
-                value="John Doe"
+                formControlName="username"
               />
             </label>
         </div>
@@ -45,7 +50,7 @@
           <span>Email</span>
           <input
             type="email"
-            value="mail@mail.com"
+            formControlName="email"
           />
         </label>
       <div>
@@ -53,52 +58,70 @@
           <span>Password</span>
           <input
             type="password"
-            value="@Password123!"
+            formControlName="password"
           />
-          <button>Update</button>
+          <button
+            [disabled]="userFormDisabled()"
+            type="button"
+            (click)="updateUserHandler('password')"
+          >Update</button>
         </label>
       </div>
+      <br /> <hr /> <br/>
+        <button
+          [disabled]="userFormDisabled()"
+          type="submit"
+          (click)="updateUserHandler('all')"
+        >Update All</button>
+      </form>
     }
     @if (tab() === 1){
       <div style="width: fit-content; margin-left: auto;">
-        <button (click)="fetchAdminData()">Refresh Logs</button>
+        <button (click)="fetchAdminData()">Refresh</button>
         <span style="margin-left: 1rem; font-size: 0.9rem;">Last Updated: {{ lastUpdated() }}</span>
       </div>
       <div class="top-menu" style="align-items: center; border: 1px solid black; padding: 1rem; margin-bottom: 1rem;">
           <span>FILTERS</span>
-          <label style="flex-direction: column; gap: 0; align-items: flex-start;">
-            <span style="font-size: 0.8rem;">Level</span>
-            <select>
-                <option value="1">Severe</option>
-                <option value="2">Warning</option>
-                <option value="3">Info</option>
-            </select>
-          </label>
-          <label style="flex-direction: column; gap: 0; align-items: flex-start;">
-            <span style="font-size: 0.8rem;">Describe</span>
-            <select>
-                <option value="f">Full</option>
-                <option value="s">Short</option>
-            </select>
-          </label>
-          <label style="flex-direction: column; gap: 0; align-items: flex-start;">
-            <span style="font-size: 0.8rem;">Filter by API</span>
-            <select>
-                <option value="-1">None</option>
-                @for (filterAPI of filteredAPIs(); track `${filterAPI}`) {
-                  <option value="{{ filterAPI }}">{{filterAPI}}</option>
-                }
-            </select>
-          </label>
+          <form
+            [formGroup]="filterForm"
+            style="display: flex; align-items: center; gap: 0.5rem;"
+          >
+            <label style="flex-direction: column; gap: 0; align-items: flex-start;">
+              <span style="font-size: 0.8rem;">Level</span>
+              <select formControlName="level" (change)="filterSubmit()">
+                  <option value="None">None</option>
+                  <option value="Severe">Severe</option>
+                  <option value="Warning">Warning</option>
+                  <option value="Info">Info</option>
+              </select>
+            </label>
+            <label style="flex-direction: column; gap: 0; align-items: flex-start;">
+              <span style="font-size: 0.8rem;">Describe</span>
+              <select formControlName="describe" (change)="filterSubmit()">
+                  <option value="f">Full</option>
+                  <option value="s">Short</option>
+              </select>
+            </label>
+            <label style="flex-direction: column; gap: 0; align-items: flex-start;">
+              <span style="font-size: 0.8rem;">Filter by API</span>
+              <select formControlName="api" (change)="filterSubmit()">
+                  <option value="None">None</option>
+                  @for (filterAPI of filteredAPIs(); track `${filterAPI}`;) {
+                    <option value="{{ filterAPI }}">{{filterAPI}}</option>
+                  }
+              </select>
+            </label>
+          </form>
       </div>
       <div class="content">
-        @for (log of logs(); track `${log.id}`) {
+        @for (log of filteredLogs(); track `${log.id}`) {
           <log
             level="{{log.level || 'Info'}}"
             api="{{log.api}}"
             date="{{log.date}}"
             action="{{log.action}}"
             description="{{log.description}}"
+            showFull="{{ filterForm.value.describe }}"
           />
         }
       </div>
