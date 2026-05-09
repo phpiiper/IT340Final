@@ -1,0 +1,58 @@
+<div class="body" id="account-page">
+
+  @if (fetching()){
+    <h2>LOADING</h2>
+  } @else if (!loggedIn()){
+    <h2>CANNOT ACCESS</h2>
+    <a href="/">Go Back</a>
+  } @else {
+        <div class="container" id="account">
+            <h2>Account</h2>
+
+            <form
+              [formGroup]="profileForm"
+            >
+              <label>
+                <span>ID</span>
+                <input
+                  formControlName="id"
+                />
+              </label>
+                <label>
+                    <span>Username</span>
+                    <input
+                      formControlName="username"
+                      autocomplete="new-username"
+                    />
+                  <button
+                    (click)="updateUserHandler('username')"
+                  >Update</button>
+                </label>
+              <label>
+                <span>Email</span>
+                <input
+                  formControlName="email"
+                  autocomplete="email"
+                />
+                <button
+                  (click)="updateUserHandler('email')"
+                >Update</button>
+              </label>
+
+              <label>
+                <span>Update Password</span>
+                <input
+                  formControlName="password"
+                  type="password"
+                  autocomplete="new-password"
+                />
+                <button
+                  (click)="updateUserHandler('password')"
+                >Update</button>
+              </label>
+              <br/><hr/><br/>
+              <a href="/">Go Back</a>
+            </form>
+        </div>
+  }
+</div>

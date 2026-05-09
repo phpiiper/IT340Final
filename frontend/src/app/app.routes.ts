@@ -4,6 +4,7 @@ import { CreatePage } from '../../components/createPage';
 import { DeckPage } from '../../components/deckPage';
 import { DecksPage } from '../../components/decksPage';
 import { AdminPage } from '../../components/adminPage';
+import { AccountPage } from '../../components/accountPage';
 
 export const routes: Routes = [
   {
@@ -25,5 +26,9 @@ export const routes: Routes = [
   {
     path: "admin",
     component: AdminPage
+  },
+  {
+    path: "account",
+    component: AccountPage
   }
 ];

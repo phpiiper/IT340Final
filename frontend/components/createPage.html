@@ -8,7 +8,7 @@
     <a href="/decks"><button>
       <mat-icon>book</mat-icon>
     </button></a>
-    @if (user()?.role === "A") {
+    @if (user().role === "A") {
       <a href="/admin"><button>
         <mat-icon>square</mat-icon>
       </button></a>
@@ -132,6 +132,10 @@
       > LOG
       </button>
       <button
+        (click)="toggleShowPromptPopup()"
+      > AI Prompt
+      </button>
+      <button
         (click)="toggleDeckPage()"
         style="position: absolute; right: 1rem;"
       >
@@ -243,9 +247,33 @@
             <button
               style="margin-left: 2rem; padding: 0 1rem;"
               type="submit"
-              [disabled]="disableSaving()"
+              [disabled]="disableSaving() || runningAI()"
             >Save</button>
         </div>
+      </form>
+    </div>
+
+    <div
+      class="popup {{ showPromptPopup() ? 'show' : 'hide' }}"
+      id="ai-popup"
+      title="Generate Deck"
+    >
+      <p>Generate a deck based on what you prompt:</p>
+      <form
+        [formGroup]="promptForm"
+        (submit)="generateDeckHandler($event)"
+      >
+        <textarea
+          style="width: 100%; margin-top: 4px; padding: 0.5rem; resize: none;"
+          placeholder="Prompt"
+          formControlName="message"
+        ></textarea>
+
+        <button type="submit"
+          [disabled]="disableSaving() || runningAI()"
+        >
+        Generate</button>
+
       </form>
     </div>
   </div>
