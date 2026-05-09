@@ -1,6 +1,9 @@
 <div class="body" id="deck-page">
   <div class="flex header">
-    <a href="/">Back</a>
+    <a href="/">Home</a>
+    @if (!loading() && deck()){
+        <a href="/decks">Decks</a>
+    }
     <h2>Deck</h2>
   </div>
   @if (loading()){

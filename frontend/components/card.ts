@@ -41,7 +41,6 @@ export class Card {
 @Component({
   selector: 'cardpopup',
   imports: [
-    MatButton
   ],
   template: `
 <div class="popup-parent">

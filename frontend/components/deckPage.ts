@@ -17,7 +17,7 @@ export interface DeckType {
 
 @Component({
   selector: 'CreatePage',
-  imports: [Card, MatButton, ReactiveFormsModule],
+  imports: [Card, ReactiveFormsModule],
   templateUrl: './deckPage.html',
 })
 export class DeckPage implements OnInit{

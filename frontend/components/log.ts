@@ -12,7 +12,9 @@ import {CardType} from './createPage';
       <span class="api">{{ api() }} </span>
       <span class="date">[{{date()}}]  </span>
       <span class="action">{{ action() }}</span>
+      @if (showFull() === "f"){
       <span class="description">{{ description() }}</span>
+      }
     </div>
   `
 })
@@ -22,4 +24,5 @@ export class Log {
   date = input('date');
   action = input('action');
   description = input('description');
+  showFull = input("f");
 }
