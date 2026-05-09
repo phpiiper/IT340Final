@@ -32,6 +32,8 @@ router.route('/deck')
     // {id, password}
 router.route("/user/auth")
     .get(MainController.apiGetUserAuth)
+router.route("/user/update")
+    .post(MainController.apiUpdateUser)
     // debugging purposes ONLY
 router.route('/deck/create')
     .post(MainController.apiCreateDeck)
@@ -40,8 +42,20 @@ router.route('/deck/user')
     .get(MainController.apiGetUserDecks)
 router.route('/deck/export')
     .post(MainController.apiExportDeck)
+router.route('/deck/copy')
+    .post(MainController.apiCopyDeck)
+router.route('/deck/import')
+    .post(MainController.apiImportDeck)
+router.route('/deck/update')
+    .post(MainController.apiUpdateDeck)
+
+// ADMIN
 router.route('/admin/fetch')
     .get(MainController.apiFetchAdminData)
 router.route('/admin/updateUser')
     .post(MainController.apiAdminUpdateUser)
 export default router
+
+// AI
+router.route('/ai/deck')
+    .post(MainController.apiSuggestDeck)

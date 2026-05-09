@@ -1,5 +1,6 @@
 import mainDAO from '../dao/mainDAO.js'
 import jwt from 'jsonwebtoken'
+import bcrypt from "bcrypt";
 
 export default class MainController {
     // USER TOOLS
@@ -49,14 +50,14 @@ export default class MainController {
                 process.env.JWT_SECRET,
                 {
                     algorithm: "HS256",
-                    expiresIn: '1h'
+                    expiresIn: '4h'
                 })
             // set cookie
             res.cookie(process.env.COOKIE_NAME, jwtToken, {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === "production",
                 sameSite: "strict",
-                maxAge: 3600000
+                maxAge: 14400000
             })
             // return response
             await mainDAO.log(3, "apiLogin", "Successful log in", `Called by user ${user._id}`)
@@ -157,11 +158,10 @@ export default class MainController {
     static async apiGetUserDecks(req, res, next){
         try {
             await mainDAO.log(3, "apiGetUserDecks", "Called API", "")
-            const verify = jwt.verify(req.cookies[process.env.COOKIE_NAME], process.env.JWT_SECRET)
-            if (!verify) {
-                return res.json({success: false, error: true, message: "User not authenticated!"})
+            if (!req.cookies[process.env.COOKIE_NAME]){
+                return res.json({success: false, error: true, message: "Must be signed in!"})
             }
-            const {decks, error: deckError, message: deckMessage} = await mainDAO.getUserDecks(verify)
+            const {decks, error: deckError, message: deckMessage} = await mainDAO.getUserDecks(req.cookies[process.env.COOKIE_NAME])
             if (deckError){
                 return res.json({success: false, error: true, message: deckMessage})
             }
@@ -175,7 +175,7 @@ export default class MainController {
         } catch (e){
             await mainDAO.log(1, "apiGetUserDecks", "Catch Error", e.message)
             console.log(e)
-            return res.json({success: false, error: true, message: e.message})
+            return res.json({success: false, error: true, message: e.message, decks: []})
         }
     }
 
@@ -232,10 +232,33 @@ export default class MainController {
         }
     }
 
+    static async apiUpdateDeck(req, res, next){
+        try {
+            await mainDAO.log(3, "apiUpdateDeck", "Called API", "")
+            const cookie = req.cookies[process.env.COOKIE_NAME]
+            if (!req?.body?.deck || !req?.body?.method){
+                return res.json({success: false, error: true, message: "Missing deck in payload!"})
+            }
+            const {error, success, message} = await mainDAO.updateDeck(req.body.deck?._id, cookie, req.body.method, req.body.deck)
+            if (error){
+                await mainDAO.log(2, "apiUpdateDeck", "Error Updating Deck", "")
+            }
+            return res.json({success, error, message})
+
+        } catch (e){
+            console.log(e)
+            await mainDAO.log(1, "apiUpdateDeck", "Catch Error", e.message)
+            res.json({success: false, error: true, message: e.message})
+        }
+    }
+
     static async apiExportDeck(req, res, next){
         try {
             await mainDAO.log(3, "apiExportDeck", "Called API", "")
             const cookie = req.cookies[process.env.COOKIE_NAME]
+            if (!req?.body?.deckID){
+                return res.json({success: false, error: true, message: "Missing deckID in payload!"})
+            }
             const {error, message, deck} = await mainDAO.exportDeck(cookie, req?.body?.deckID, req?.body?.password)
             if (error){
                 return res.json({success: false, error: true, message})
@@ -243,19 +266,62 @@ export default class MainController {
 
             const date = new Date().toISOString().split("T")[0]
             const name = `[DeckExport] - ${deck.name} - ${date}.js`
+
             const myBlob = new Blob([JSON.stringify(deck, null, 2)], { type: 'application/javascript' });
             const buffer = Buffer.from(await myBlob.arrayBuffer());
 
             await mainDAO.log(1, "apiAdminUpdateUser", "Exporting Deck", `${req?.body?.deckID} was exported to JSON`)
             // Set headers to trigger a browser download
-            res.setHeader('Content-Disposition',`'attachment; filename="${name}"`);
+            res.setHeader('Content-Disposition',`attachment; filename="${name}"`);
             res.setHeader('Content-Type', 'text/plain');
-
             res.send(buffer);
 
         } catch (e){
             console.log(e)
             await mainDAO.log(1, "apiExportDeck", "Catch Error", e.message)
+            res.json({success: false, error: true, message: e.message})
+        }
+    }
+
+
+    static async apiImportDeck(req, res, next){
+        try {
+            await mainDAO.log(3, "apiImportDeck", "Called API", "")
+            const cookie = req.cookies[process.env.COOKIE_NAME]
+            if (!req?.body?.deck){
+                return res.json({success: false, error: true, message: "Missing deck in payload!"})
+            }
+            const {error, message, deck} = await mainDAO.importDeck(cookie, req.body.deck)
+            if (error){
+                return res.json({success: false, error: true, message})
+            }
+
+            res.json({success: true, error: false, message: "Imported Deck!", deck})
+
+        } catch (e){
+            console.log(e)
+            await mainDAO.log(1, "apiImportDeck", "Catch Error", e.message)
+            res.json({success: false, error: true, message: e.message})
+        }
+    }
+
+    static async apiCopyDeck(req, res, next){
+        try {
+            await mainDAO.log(3, "apiCopyDeck", "Called API", "")
+            const cookie = req.cookies[process.env.COOKIE_NAME]
+            if (!req?.body?.deckID){
+                return res.json({success: false, error: true, message: "Missing deckID in payload!"})
+            }
+            const {error, message, deck} = await mainDAO.copyDeck(cookie, req.body.deckID, req?.body?.password)
+            if (error){
+                return res.json({success: false, error: true, message})
+            }
+
+            res.json({success: true, error: false, message: "Copied Deck!", deck})
+
+        } catch (e){
+            console.log(e)
+            await mainDAO.log(1, "apiCopyDeck", "Catch Error", e.message)
             res.json({success: false, error: true, message: e.message})
         }
     }
@@ -287,8 +353,8 @@ export default class MainController {
             await mainDAO.log(3, "apiAdminUpdateUser", "Successful get of admin data", `${user._id} fetched admin data.`)
              res.json({
                 success: true, error: false, message: "Successfully fetched admin data!",
-                users,
-                logs
+                users: users || [],
+                logs: logs || []
              })
 
         } catch (e){
@@ -304,9 +370,11 @@ export default class MainController {
             const cookie = req.cookies[process.env.COOKIE_NAME]
             const {user, error, message} = await mainDAO.getUserAuth(cookie)
             if (error){
+                await mainDAO.log(2, "apiAdminUpdateUser", "Error Retrieving User", message)
                 return res.json({success: false, error: true, message})
             }
             if (user?.role !== "A"){
+                await mainDAO.log(2, "apiAdminUpdateUser", "Unauthorized to User", `${user._id} attempted to update user.`)
                 return res.json({success: false, error: true, message: "Unauthorized!"})
             }
 
@@ -320,16 +388,32 @@ export default class MainController {
              const updateValue = req?.body?.value;
              const {user: updateUser, error: guError, message: guMessage} = await mainDAO.getUser(cookie, userId)
              if (guError){
+                 await mainDAO.log(2, "apiAdminUpdateUser", "Error Retrieving User", `${user._id} attempted to retrieve user ${userId}.`)
                  return res.json({error: guError, message: guMessage})
              }
              // VALIDATE //
-             if (!["username","password"].includes(updateKey)){
+             if (!["username","password","email"].includes(updateKey)){
                  throw Error("Invalid update key.")
              }
-             if (updateKey === "username"){
-                if (typeof updateValue !== "string" || updateKey.replaceAll(" ","").length > 3){
-                    throw Error("Invalid update value.")
-                }
+             const {error: vuuError, message: vuuMessage} = await mainDAO.validateUpdateUser(userId, updateKey, updateValue)
+             if (vuuError){
+                 return res.json({
+                     success: false, error: true, message: vuuMessage
+                 })
+             }
+
+             // NOW... update value
+             let finalValue = updateValue;
+             if (updateKey === "password"){
+                // HASH
+                finalValue = bcrypt.hashSync(updateValue, 10)
+             }
+
+             const {error: uuError, message: uuMessage} = await mainDAO.updateUser(updateKey, finalValue, cookie, userId)
+             if (uuError){
+                 return res.json({
+                     success: false, error: true, message: uuMessage
+                 })
              }
 
             await mainDAO.log(3, "apiAdminUpdateUser", "Successful update of user", `${userId} updated [${updateKey}]`)
@@ -341,6 +425,83 @@ export default class MainController {
             console.log(e)
             await mainDAO.log(1, "apiAdminUpdateUser", "Catch Error", e.message)
             res.json({success: false, error: true, message: e.message})
+        }
+    }
+
+    static async apiUpdateUser(req, res, next){
+        try {
+            await mainDAO.log(3, "apiUpdateUser", "Called API", "")
+            const cookie = req.cookies[process.env.COOKIE_NAME]
+            const {user, error, message} = await mainDAO.getUserAuth(cookie, req?.body?.id)
+            if (error){
+                await mainDAO.log(2, "apiUpdateUser", "Error Retrieving User", message)
+                return res.json({success: false, error: true, message})
+            }
+            /*
+                Update User
+                - check values + validation
+                - check user exists
+             */
+             const userId = req?.body?.id;
+             const updateKey = req?.body?.key;
+             const updateValue = req?.body?.value;
+             const {user: updateUser, error: guError, message: guMessage} = await mainDAO.getUser(cookie, userId)
+             if (guError){
+                 await mainDAO.log(2, "apiAdminUpdateUser", "Error Retrieving User", `${user._id} attempted to retrieve user ${userId}.`)
+                 return res.json({error: guError, message: guMessage})
+             }
+             // VALIDATE //
+             if (!["username","password","email"].includes(updateKey)){
+                 throw Error("Invalid update key.")
+             }
+             const {error: vuuError, message: vuuMessage} = await mainDAO.validateUpdateUser(userId, updateKey, updateValue)
+             if (vuuError){
+                 return res.json({
+                     success: false, error: true, message: vuuMessage
+                 })
+             }
+
+             // NOW... update value
+             let finalValue = updateValue;
+             if (updateKey === "password"){
+                // HASH
+                finalValue = bcrypt.hashSync(updateValue, 10)
+             }
+
+             const {error: uuError, message: uuMessage} = await mainDAO.updateUser(updateKey, finalValue, cookie, userId)
+             if (uuError){
+                 return res.json({
+                     success: false, error: true, message: uuMessage
+                 })
+             }
+
+            await mainDAO.log(3, "apiUpdateUser", "Successful update of user", `${userId} updated [${updateKey}]`)
+             res.json({
+                success: true, error: false, message: "Successfully updated user!"
+             })
+
+        } catch (e){
+            console.log(e)
+            await mainDAO.log(1, "apiUpdateUser", "Catch Error", e.message)
+            res.json({success: false, error: true, message: e.message})
+        }
+    }
+
+    static async apiSuggestDeck(req, res, next){
+        try {
+            await mainDAO.log(3, "apiSuggestDeck", "Called API", "")
+            const cookie = req.cookies[process.env.COOKIE_NAME]
+            if (!cookie || typeof req?.body?.message !== "string"){
+                return res.json({success: false, error: true, message: `Invalid payload. ${req?.body?.message}`})
+            }
+            const {success, error, message} = await mainDAO.suggestDeck(cookie, req?.body?.message)
+            await mainDAO.log(3, "apiSuggestDeck", "Returned result", "")
+            return res.json({success, error, message})
+
+        } catch (e){
+            console.log(e)
+            await mainDAO.log(1, "apiSuggestDeck", "Catch Error", e.message)
+            return res.json({success: false, error: true, message: e.message})
         }
     }
 

@@ -8,6 +8,9 @@ let mfa;
 import mongodb from "mongodb"
 import jwt from "jsonwebtoken";
 const ObjectId = mongodb.ObjectId
+// import { GoogleGenAI } from "@google/genai";
+import { AIProjectClient } from "@azure/ai-projects";
+import { DefaultAzureCredential } from "@azure/identity";
 
 const levels = ["Severe", "Warning", "Info"]
 
@@ -75,6 +78,9 @@ export default class MainDAO {
     }
 
     static async getUserAuth(cookie) {
+        if (!cookie){
+            return {success: false, error: true, message: "Cookie not found!"}
+        }
         const verify = jwt.verify(cookie, process.env.JWT_SECRET)
         if (!verify){
             return {success: false, error: true, message: "User not authenticated!"}
@@ -147,6 +153,7 @@ export default class MainDAO {
                 .find(query)
                 .limit(itemsPerPage)
                 .skip(itemsPerPage * page)
+                .sort({name: 1})
             const cardsList = await cursor.toArray()
             const totalNumCards = await cards.countDocuments(query)
             return {cardsList, totalNumCards}
@@ -159,13 +166,18 @@ export default class MainDAO {
 
     static async getUser(userCookie, findUserId) {
         // assume cookie is decoded as object
+        let cookie = userCookie;
         try {
-            if (typeof userCookie !== "object" && !userCookie?.id) {
+            cookie = jwt.verify(userCookie, process.env.JWT_SECRET)
+        } catch (e){}
+
+        try {
+            if (typeof cookie !== "object" && !cookie?.id) {
                 return {error: true, message: "User not authenticated!"}
             }
-            const user = await users.findOne({_id: new ObjectId(userCookie.id)})
-            if (user?.type === "A" && findUserId){
-                await users.findOne({_id: new ObjectId(findUserId)})
+            let user = await users.findOne({_id: new ObjectId(cookie.id)})
+            if (user?.role === "A" && findUserId){
+                user = await users.findOne({_id: new ObjectId(findUserId)})
             }
             if (!user) {
                 return {error: true, message: "User doesn't exist!"}
@@ -198,10 +210,9 @@ export default class MainDAO {
         else if (user?.role === "U" && deck.type === "Private" && deck.author.toString() !== user._id.toString()) {
              return {error: true, message: "Deck cannot be accessed!"}
          }
-         console.log(deck.cards)
         const finCards = await cards.find({_id: {$in: deck.cards.map(x => new ObjectId(x))}}).toArray()
         const finDeck = {...deck, cards: finCards}
-        return {deck: finDeck, success: true, error: false, message: "Deck found!"}
+        return {user, deck: finDeck, success: true, error: false, message: "Deck found!"}
     }
 
     static async getUserDecks(userCookies) {
@@ -237,17 +248,50 @@ export default class MainDAO {
         const {cards, maxCards, tags, name, type, password} = deck
         if (cards?.length > maxCards){ return {error: true, message: "Deck is too big!"}}
         if (name?.length > 30){ return {error: true, message: "Deck name is too long!"}}
+        if (name?.length < 3){ return {error: true, message: "Deck name is too short!"}}
         if (!Array.isArray(tags) || tags.find(x => typeof x !== "string")){ return {error: true, message: "Incorrect tag format! Must be an array of strings."}}
-        if (!["Public","Private","Public"].includes(type)){
+        if (!["Public","Private","Password"].includes(type)){
             return {error: true, message: "Incorrect tag type!"}
         }
-        if (type === "Private" && (!password || password?.length > 3)){
+        if (type === "Password" && (!password || password?.length > 3)){
             return {error: true, message: "Invalid deck password! Must be at least 3 characters long!"}
         }
         // CHECK CARDS
         // ???
 
         return {success: true, error: false, message: "Deck is valid!"}
+    }
+    static async updateDeck(deckId, cookies, mode, newDeck){
+        if (!decks){ return {error: true, message: "Cannot connect to DB!"}}
+        const {deck, user, error, message} = await this.getDeck(cookies, deckId);
+        if (error){ return {error, message, deck: null} }
+        if (user._id.toString() !== deck._id.toString() && user.role !== "A") {
+            return {error, message: "Cannot access deck!"}
+        }
+        // assume user is OWNER of deck OR user is ADMIN
+        if (mode === "delete"){
+            // assume deletion of deck
+            await decks.deleteOne({_id: new ObjectId(deck._id)})
+            return {error: false, success: true, message: "Deck successfully deleted!"}
+        } else if (mode === "update"){
+            // update deck to all values
+            // CHECK validity
+            const {success, message} = await this.verifyDeck(newDeck);
+            if (!success) { return {error: true, message} }
+            let finDeck = {...newDeck}
+            // if password exists... hash + update password!
+            if (finDeck.password){
+                if (finDeck.type !== "Password"){ delete finDeck.password; }
+                else {
+                    finDeck.password = bcrypt.hashSync(finDeck.password, 10)
+                }
+            }
+            decks.updateOne({_id: new ObjectId(deck._id)}, finDeck)
+
+            return {error: false, success: true, message: "Deck successfully updated!"}
+        } else {
+            return {error: true, message: "Invalid mode given!"}
+        }
     }
 
 
@@ -302,25 +346,75 @@ export default class MainDAO {
             author: user.id,
             password: null, _id: null
         }
-        await this.createDeck(user.id, newDeck)
-        return {success: true, error: false, message: "Copied deck!"}
+        const {error: cdError, message: cdMessage} = await this.createDeck(user._id, newDeck)
+        if (cdError){ return {error: cdError, success: false, message: cdMessage} }
+
+        return {success: true, error: false, message: "Copied deck!", deck}
     }
 
     static async exportDeck(cookie, deckID, password){
         // CHECK FOR PERMS
         const {deck, user, error, message} = await this.getDeck(cookie,deckID,password)
         if (error){return {error: true, message}}
-        // Create text file
-        return {success: true, error: false, message: "Deck exported!", deck}
+        // remove unncessary keys
+        if (deck?.password) {delete deck.password}
+        if (deck?.author) {delete deck.author}
+        if (deck?._id) {delete deck._id}
+        if (deck?.type) {delete deck.type}
+        return {success: true, error: false, message: "Deck exported!", deck: {...deck, cards: deck.cards.map(x => x._id)}}
     }
 
-    static async importDeck(cookie, importFile){
+    static async importCards(cardList){
+        if (Array.isArray(cardList) && cardList.length > 0){
+            const finCards = await cards.find({
+                _id: {$in: cardList.map(x => new ObjectId(x))}
+            }).toArray()
+            return finCards
+        } else {
+            return []
+        }
+    }
+
+    static async importDeck(cookie, importJSON){
         // CHECK COOKIE (get user)
+        const {error, message, user} = await this.getUserAuth(cookie);
+        if (error){
+            return {error, message}
+        }
         // CHECK IMPORT FILE STRUCT
-            // IS JSON
-            // HAS PROPER FIELDS
-        // THEN createDeck()
-        return {success: true, error: false, message: "Deck exported!", data: blob}
+        const jsonKeys = Object.keys(importJSON)
+        const reqKeys = ["cards","maxCards","name", "tags"]
+        const allIncluded = jsonKeys.every(item => reqKeys.includes(item));
+        if (!allIncluded) {return {success: false, error: true, message: "Missing keys from deck!"}}
+            // Check for valid MAXCARDS
+            if (typeof importJSON.maxCards !== "number"){
+                return {success: false, error: true, message: "maxCards must be a number!"}
+            }
+            // Check for valid CARDS format
+            if (!Array.isArray(importJSON.cards) || importJSON.cards.length > importJSON.maxCards || importJSON.cards.find(x => typeof x !== "string")){
+                return {success: false, error: true, message: "Cards do not follow correct deck formatting!"}
+            }
+            // Check for valid TAGS format
+            if (!Array.isArray(importJSON.tags) || importJSON.tags.find(x => typeof x !== "string")){
+                return {success: false, error: true, message: "Tags in deck do not follow correct deck formatting!"}
+            }
+            // Check for valid NAME format (is string)
+            if (typeof importJSON.name !== "string" && importJSON.name.length < 3){
+                return {success: false, error: true, message: "Name in deck does not follow correct deck formatting!"}
+            }
+            // THEN createDeck() -- default to private deck
+            const newCards = await this.importCards(importJSON.cards)
+            const newDeck = {...importJSON,
+                type: "Private",
+                cards: newCards
+            }
+            const {error: cdError, message: cdMessage, deckId} = await this.createDeck(user._id, newDeck)
+            if (cdError){
+                return {success: false, error: true, message: cdMessage}
+            }
+            // else, deck should be fine!
+        const deck = {...newDeck, _id: deckId, author: user._id}
+        return {success: true, error: false, message: "Deck imported!", deck}
 
     }
 
@@ -403,7 +497,9 @@ export default class MainDAO {
 
      static async adminGetUsers(user){
         if (!user || user?.role !== "A") {return {error: true, message: "Unauthorized..!"}}
-        const agu = users.find({role: "U"}).toArray()
+        const agu = await users.find({role: "U"}, {
+            projection: {_id: 1, email: 1, role: 1, username: 1}
+        }).toArray()
         //await decks.find({author: new ObjectId(userId) }).toArray()
         return {success: true, error: false, message: "Fetched users!", users: agu};
      }
@@ -428,6 +524,73 @@ export default class MainDAO {
         }
      }
 
+    static async validateUpdateUser(id, key, value){
+        try {
+            if (["username","email"].includes(key)){
+                // Check length of value
+                if (typeof value !== "string" || value.length < 3){
+                    return {error: true, message: "Invalid input (must be at least 3 characters long)!"}
+                }
+                // check if in use
+                const user = await users.findOne({[key]: value})
+                if (user && user._id.toString() !== id) {
+                    return {error: true, message: `[${key}] is already in use.`};
+                }
+                if (key === "email"){
+                    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                    if (!emailRegex.test(value)) {
+                        return {error: true, message: "Invalid email address!"}
+                    }
+                }
+                return {success: true, message: `[${key}] passes test.`}
+            } else if (key === "password"){
+                if (value.length < 8) {
+                    return {error: true, message: "Password must be at least 8 characters long!"}
+                }
+            } else {
+                return {error: true, message: "No valid key supplied to validate."}
+            }
+            return {success: true, message: `[${key}] passes test.`}
+        } catch (e){
+            console.error("validate update user: ", e)
+            return {error: true, message: e.message || "Unknown error..."}
+        }
+    }
+
+    static async updateUser(key, value, userCookie, findUserId){
+        // dont cookie is decoded as object
+        let cookie = userCookie;
+        try {cookie = jwt.verify(userCookie, process.env.JWT_SECRET)
+        } catch (e){}
+        try {
+            if (!key || !value || !cookie) {
+                return {error: true, message: "Missing keys!"}
+            }
+
+            if (typeof cookie !== "object" && !cookie?.id) {
+                return {error: true, message: "User not authenticated!"}
+            }
+            let user = await users.findOne({_id: new ObjectId(cookie.id)})
+            if (user?.role === "A" && findUserId){
+                user = await users.findOne({_id: new ObjectId(findUserId)})
+            }
+            if (!user) {
+                return {error: true, message: "User doesn't exist!"}
+            }
+
+            // UPDATE USER
+            await users.updateOne({
+                _id: new ObjectId(user._id)
+            }, {
+                $set: {[key]: value}
+            })
+            return {error: false, success: true, message: `Updated [${key}] for user ${user._id}!`}
+        } catch (e){
+            console.error("update user: ", e)
+            return {error: true, message: e.message || e || "Unknown error..."}
+        }
+    }
+
     static async log(level, api, action, description){
         try {
             const logsDir = path.join(process.cwd(), "logs")
@@ -444,4 +607,56 @@ export default class MainDAO {
             console.error("Failed to write to log: ", e)
         }
     }
+
+
+    /*
+            AI STUFF
+     */
+     static async suggestDeck(userCookie, message){
+        // check if verified
+         const auth = await this.getUserAuth(userCookie)
+         if (auth.error){
+            return {success: false, error: true, message: auth.message}
+         }
+        // then send message
+        /*
+         const ai = new GoogleGenAI({});
+         const response = await ai.models.generateContent({
+             model: "gemini-3-flash-preview",
+             contents: "Explain how AI works in a few words",
+         });
+         */
+         const project = new AIProjectClient(process.env.PROJECT_ENDPOINT, new DefaultAzureCredential());
+
+         const openAIClient = await project.getOpenAIClient();
+         const response = await openAIClient.responses.create({
+             input: (message || "Generate a deck by selecting two cards at random and create the deck around their abilities/types.") + " Ensure response is JSON parseable.",
+             store: false,
+             agent_reference: {
+                 name: process.env.AGENT_NAME,
+                 version: process.env.AGENT_VERSION,
+                 type: "agent_reference",
+             },
+         });
+         let res;
+         try {
+             res = JSON.parse(response?.output_text);
+             res = res.deck
+         } catch (e){
+                console.log(e, response?.output_text);
+             return {success: false, error: true, message: `Could not parse response.`}
+         }
+         // check if it is usable...
+         const {error: vdError, message: vdMessage} = await this.verifyDeck({...res,
+            type: "Private"
+         })
+         if (vdError) {
+             console.log(res);
+            return {success: false, error: vdError, message: `Response was not valid: ${vdMessage}`}
+         }
+
+         return {
+            success: true, error: false, message: res
+         }
+     }
 }

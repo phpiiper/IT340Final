@@ -207,7 +207,7 @@ div.hide {
   /deck/[id] :: page
 */
 .body {
-  height: unset; padding: 1rem;
+  height: unset;
 }
 #deck-page > .header {
   padding: 1rem;
@@ -215,6 +215,9 @@ div.hide {
   gap: 1rem;
   border: 1px solid black; border-radius: 4px;
   margin-bottom: 1rem;
+}
+#deck-page > .body {
+  padding: 1rem;
 }
 
 .container:has(.deck-container) {
@@ -260,7 +263,16 @@ div.hide {
   position: absolute; top: 1rem; margin: 1rem;
   left: calc(100vw - 400px - 3rem);
   width: 400px; height: 300px;
-  border: 1px solid black; padding: 1rem; background-color: pink; z-index: 2;
+  border: 1px solid black; padding: 1rem; z-index: 2;
+}
+#ai-popup {
+  position: absolute; top: 1rem; margin: 1rem;
+  left: 1rem;
+  width: 400px; height: 300px;
+  border: 1px solid black; padding: 1rem; z-index: 2;
+}
+#ai-popup textarea {
+  height: 6rem;
 }
 
 
@@ -272,6 +284,7 @@ div.hide {
   padding-top: 2.5rem !important;
 
   overflow-y: auto;
+  max-height: 250px;
 }
 .popup:after {
   position: absolute;
@@ -396,6 +409,7 @@ div.hide {
   border: 1px solid black;
   border-left: 1rem solid black;
   padding: 0.5rem;
+  display: flex; align-items: flex-start;
 }
 .log-div .level {
   padding: 0; margin: 0 1rem 0 0;
@@ -404,26 +418,77 @@ div.hide {
 .log-div .level.severe {
   color: red;
 }
+.log-div:has(.level.severe) {
+  border-color: red;
+}
 .log-div .level.warning {
   color: darkorange;
+}
+.log-div:has(.level.warning) {
+  border-color: darkorange;
 }
 .log-div .level.info {
   color: grey;
 }
+.log-div:has(.level.info) {
+  border-color: grey;
+}
 .log-div .api {
   margin-right: 2rem;
   font-weight: lighter;
-  font-size: 0.8em;
+  font-size: 0.7em;
+  min-width: 7rem;
 }
 .log-div .date {
   margin-right: 2rem;
   font-weight: lighter;
   font-size: 0.9em;
 }
-.log-div .description {
+.log-div .action {
   font-size: 1em;
+  margin-right: 1rem;
+}
+.log-div .description {
+  font-style: italic;
+  font-size: 0.9rem;
 }
 
  /*
   END ADMIN PAGE
   */
+
+
+
+/*
+    /account
+ */
+ #account-page {
+  width: 100vw; height: 100vh;
+  display: flex;
+  align-items: center; justify-content: center;
+  gap: 1rem;
+ }
+ #account.container {
+    width: 30%; min-width: 400px; max-width: 95%;
+    height: fit-content;
+    border: 1px solid black;
+    display: flex; flex-direction: column; gap: 0.25rem;
+    padding: 1rem;
+    box-shadow: 0.25rem 0.5rem 0.5rem rgba(0,0,0,0.2) !important;
+ }
+#account-page label {
+  display: flex; flex-direction: column;
+  width: 100%;
+  font-weight: 500;
+  position: relative;
+}
+#account-page label input {
+  min-width: 10rem;
+  border: 1px solid black;
+  padding: 0.5rem 0.25rem;
+  border-radius: 4px;
+}
+#account-page label button {
+  position: absolute;
+  right: 1rem; bottom: 0.375rem;
+}
