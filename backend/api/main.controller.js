@@ -315,6 +315,7 @@ export default class MainController {
             }
             const {error, message, deck} = await mainDAO.importDeck(cookie, req.body.deck)
             if (error){
+                await mainDAO.log(2, "apiImportDeck", "Error in Importing", message)
                 return res.json({success: false, error: true, message})
             }
 

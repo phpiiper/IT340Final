@@ -393,8 +393,8 @@ export default class MainDAO {
         }
         // CHECK IMPORT FILE STRUCT
         const jsonKeys = Object.keys(importJSON)
-        const reqKeys = ["cards","maxCards","name", "tags"]
-        const allIncluded = jsonKeys.every(item => reqKeys.includes(item));
+        const reqKeys = ["cards","maxCards","name","tags","description"]
+        const allIncluded = reqKeys.every(item => jsonKeys.includes(item));
         if (!allIncluded) {return {success: false, error: true, message: "Missing keys from deck!"}}
             // Check for valid MAXCARDS
             if (typeof importJSON.maxCards !== "number"){
@@ -413,12 +413,13 @@ export default class MainDAO {
                 return {success: false, error: true, message: "Name in deck does not follow correct deck formatting!"}
             }
             // THEN createDeck() -- default to private deck
-            const newCards = await this.importCards(importJSON.cards)
+            // const newCards = await this.importCards(importJSON.cards)
+            // if (!newCards) {return {success: false, error: true, message: "Invalid cards imported?"}}
             const newDeck = {...importJSON,
                 type: "Private",
-                cards: newCards
+                name: "Copy of " + importJSON.name
             }
-            const {error: cdError, message: cdMessage, deckId} = await this.createDeck(user._id, newDeck)
+            const {error: cdError, message: cdMessage, deckId} = await this.createDeck(user._id.toString(), newDeck)
             if (cdError){
                 return {success: false, error: true, message: cdMessage}
             }
