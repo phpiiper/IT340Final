@@ -1,5 +1,5 @@
 import { Component, signal, OnInit, input, resource, computed } from '@angular/core';
-import {Router} from '@angular/router';
+import {ActivatedRoute, Router} from '@angular/router';
 import {MatToolbarModule} from '@angular/material/toolbar';
 import {MatButtonModule} from '@angular/material/button';
 import {MatIconModule} from '@angular/material/icon';
@@ -41,12 +41,13 @@ export interface DeckType {
   templateUrl: './createPage.html',
 })
 export class CreatePage implements OnInit{
-  constructor(private router: Router){}
+  constructor(private router: Router, private route: ActivatedRoute){}
 
   ngOnInit(){
   /*
       INIT
    */
+   let user:any = null;
     this.fetchUser().then(res => {
         if (!res.verify){
             this.router.navigate(['/']).then(() => {})
@@ -54,8 +55,27 @@ export class CreatePage implements OnInit{
         }
         console.log(res)
         this.user.set(res.verify)
+        user = res.verify;
       })
-    // GET MAX/MIN
+    this.route.queryParamMap.subscribe(params => {
+      const edit = params.get('edit');
+      if (edit) {
+          // fetch deck
+          const res = fetch(`${environment.backend}/api/deck`,{
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            method: "POST",
+            body: JSON.stringify({ id: edit })
+          }).then(async (r) => {
+              if (!r.ok){return}
+              const d = await r.json();
+              if (d.error){return console.log(`ERR`,d.message)}
+              if (user && user.id !== d.deck.author){return console.log("access denied to edit deck")}
+              // can edit...
+              this.deck.set(d.deck)
+          });
+      }
+    });
 
   }
 
@@ -78,8 +98,6 @@ export class CreatePage implements OnInit{
   });
   async filterHandler(){
     const filterObj = this.filterForm.value;
-
-    console.log(78,filterObj)
 
     // @ts-ignore
     this.cardFilters.update(prev => ({
@@ -257,28 +275,49 @@ export class CreatePage implements OnInit{
   }
 
   disableSaving = signal(false)
-  saveDeck(event:Event){
+  async saveDeck(event:Event){
     event.preventDefault();
     if (this.runningAI()){return}
     console.log(this.deck())
     this.disableSaving.set(true)
     let finDeck:any = this.deck()
-    fetch(`${environment.backend}/api/deck/create`,{
-      method: "POST",
-      body: JSON.stringify(finDeck),
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-    }).then(async res => {
-      console.log(res)
-      const data = await res.json();
-      if (!data || data.error){
-        console.log("ERR! show this later???")
-        console.log(data?.message || "Unknown error!")
+    try {
+      if (finDeck._id){
+        // updating a deck
+        finDeck = {...finDeck,
+          cards: finDeck.cards.map((x:any) => x?._id || x)
+        }
+        console.log(finDeck)
+        const res = await fetch(`${environment.backend}/api/deck/update`,{
+          method: "POST",
+          body: JSON.stringify({
+            method: "update",
+            deck: finDeck
+          }),
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+        })
+        const d = await res.json()
+        if (d.error) {return console.log("UPDATE Data Res Error: ", d.message)}
+        console.log(d)
+        // window.location.href = `/deck/${d.deckId}`
       } else {
-        window.location.href = `/deck/${data.deckId}`
+        // create new deck
+        const res = await fetch(`${environment.backend}/api/deck/create`,{
+          method: "POST",
+          body: JSON.stringify(finDeck),
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+        })
+        const d = await res.json()
+        if (d.error) {return console.log("CREATE Data Res Error: ", d.message)}
+        window.location.href = `/deck/${d.deckId}`
       }
+    } catch (error) {
+      console.log(error)
+    } finally {
       this.disableSaving.set(false)
-    })
+    }
   }
 
   async logout(){

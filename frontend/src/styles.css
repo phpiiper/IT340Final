@@ -61,10 +61,11 @@ main.main {
   font-weight: 500;
   font-size: 1.2rem;
 }
-.form label > input, .form button {
+.form label > input, .form button, .form select {
   border: 1px solid black;
   border-radius: 5px;
   padding: 0.5rem 0.5rem;
+  margin-top: 2px;
 }
 .form button {
   margin-left: auto;
@@ -200,14 +201,21 @@ div.hide {
   display: none;
 }
 
+#decks-page .body {
+  height: unset;
+  padding: 1rem;
+}
 
 
 
 /*
   /deck/[id] :: page
 */
-.body {
+#deck-page.body {
   height: unset;
+  padding: 1rem;
+
+  display: flex; flex-wrap: wrap; gap: 1rem;
 }
 #deck-page > .header {
   padding: 1rem;
@@ -215,9 +223,11 @@ div.hide {
   gap: 1rem;
   border: 1px solid black; border-radius: 4px;
   margin-bottom: 1rem;
+  width: 100%;
 }
-#deck-page > .body {
+#deck-page.body {
   padding: 1rem;
+  height: calc(100% - 1rem); width: 100%;
 }
 
 .container:has(.deck-container) {
@@ -247,17 +257,82 @@ div.hide {
   display: flex; flex-direction: column; gap: 0.5rem;
   border: 1px solid black; padding: 1rem;
   margin: 1rem 0;
+
+  width: 30%; height: fit-content;
 }
 .tags-container, .cards-container {
   display: flex; gap: 0.5rem;
   border: 1px solid black; padding: 1rem;
   margin: 1rem 0;
   flex-wrap: wrap;
-  gap: 1rem;
+  width: 100%;
 }
 .tags-container:empty, .cards-container:empty {
   margin: unset; border: unset; padding: unset;
 }
+.meta-data .tag {
+    border: 1px solid black;
+    width: fit-content; margin: 0 0.2rem 0.1rem; padding: 0.25rem; border-radius: 5px; font-size: 0.9rem !important;
+}
+.meta-data:has(.tag){
+  flex-direction: row;
+  flex-wrap: wrap;
+}
+.meta-data:has(.tag) > span:first-child {
+  width: 100%;
+}
+.button-list {
+    display: flex; flex-wrap: wrap; gap: 0.5rem;
+}
+.button-list button {
+  border: 1px solid #17616c;
+  background-color: #17616c;
+  color: white;
+  border-radius: 4px;
+  border-bottom: 3px solid #000000;
+  padding: 0.25rem 0.5rem;
+  transition: 0.1s;
+}
+.button-list button:hover {
+  cursor: pointer;
+  border-bottom-width: 0;
+}
+.button-list button:disabled {
+  cursor: unset;
+  border-color: dimgrey;
+  background-color: dimgrey;
+}
+.button-list button:disabled:hover {
+  border-bottom-width: 3px !important;
+}
+.button-list button.active {
+  background-color: #219574;
+  border-color: #219574
+}
+.button-list button.active:hover {
+  border-bottom-width: 3px !important;
+  cursor: unset;
+}
+
+#deck-page > .cards-container {
+    width: calc(70% - 4rem);
+    height: calc(100% - 75px - 1rem);
+    overflow-y: auto;
+}
+#deck-page plp-card {
+  height: fit-content;
+}
+#deck-page .flex.header {
+  margin-bottom: 0;
+}
+#deck-page .deck-info-container, #deck-page .cards-container {
+  margin: 0 !important;
+}
+
+
+
+
+
 
 #deck-popup {
   position: absolute; top: 1rem; margin: 1rem;
@@ -343,6 +418,25 @@ div.hide {
 }
 
 
+#edit-deck-popup {
+  position: fixed !important;
+  background-color: rgba(0, 0, 0, 0.73) !important;
+  z-index: 4;
+  overflow-y: auto;
+  width: 100%; height: 100%;
+  left: 0; top: 0;
+  display: none;
+}
+#edit-deck-popup.active {
+  display: flex; align-items: center; justify-content: center;
+}
+#edit-deck-popup .inner-container {
+  width: 75%; height: 85%;
+  padding: 1rem;
+  border-radius: 4px;
+  background-color: white;
+  overflow-y: auto;
+}
 
 
 
@@ -351,6 +445,9 @@ div.hide {
 /*
     ADMIN PAGE
  */
+#admin-page.body {
+  padding: 1rem;
+}
 #admin-page .top-menu {
   width: 100%;
   display: flex; gap: 1rem;

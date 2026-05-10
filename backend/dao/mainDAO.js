@@ -212,7 +212,7 @@ export default class MainDAO {
          }
         const finCards = await cards.find({_id: {$in: deck.cards.map(x => new ObjectId(x))}}).toArray()
         const finDeck = {...deck, cards: finCards}
-        return {user, deck: finDeck, success: true, error: false, message: "Deck found!"}
+        return {user, deck: finDeck, success: true, error: false, message: "Deck found!", isOwner: finDeck.author.toString() === user._id.toString()}
     }
 
     static async getUserDecks(userCookies) {
@@ -286,7 +286,8 @@ export default class MainDAO {
                     finDeck.password = bcrypt.hashSync(finDeck.password, 10)
                 }
             }
-            decks.updateOne({_id: new ObjectId(deck._id)}, finDeck)
+            delete finDeck._id
+            decks.updateOne({_id: deck._id}, {$set: finDeck})
 
             return {error: false, success: true, message: "Deck successfully updated!"}
         } else {
@@ -310,7 +311,7 @@ export default class MainDAO {
                 - description
                 - mode
              */
-            const {cards, maxCards, tags, name, password, type} = deck
+            const {cards, maxCards, tags, name, password, type, description} = deck
             const {error, message} = await this.verifyDeck(deck)
             if (error){return {error: true, message}}
             let hashedPassword = null
@@ -318,17 +319,20 @@ export default class MainDAO {
                 hashedPassword = bcrypt.hashSync(password, 10)
             }
             const deckId = new ObjectId()
-            await decks.insertOne({
+            const finDeck = {
                 _id: deckId,
                 author: userId,
                 cards: cards.map(x => x?._id?.toString() || x),
                 maxCards,
                 tags,
                 name,
-                password: hashedPassword,
+                description: description || "",
                 type: type
+            }
+            await decks.insertOne({...finDeck,
+                password: hashedPassword,
             })
-            return {success: true, error: false, message: "Deck created!", deckId}
+            return {success: true, error: false, message: "Deck created!", deckId, deck: finDeck}
         } catch (e) {
             return {error: true, message: e.message}
         }
@@ -346,10 +350,10 @@ export default class MainDAO {
             author: user.id,
             password: null, _id: null
         }
-        const {error: cdError, message: cdMessage} = await this.createDeck(user._id, newDeck)
+        const {error: cdError, message: cdMessage, deckId, deck: createdDeck} = await this.createDeck(user._id, newDeck)
         if (cdError){ return {error: cdError, success: false, message: cdMessage} }
 
-        return {success: true, error: false, message: "Copied deck!", deck}
+        return {success: true, error: false, message: "Copied deck!", deckId, deck: createdDeck}
     }
 
     static async exportDeck(cookie, deckID, password){

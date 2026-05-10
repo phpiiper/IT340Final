@@ -36,6 +36,7 @@
       </button>
       <input
         (click)="closeFilters()"
+        (input)="filterHandler()"
         class="search-bar"
         type="text"
         placeholder="Search..."
@@ -240,6 +241,7 @@
           <hr />
         <textarea
           (input)="updateDeckInfo('description',$event)"
+          [defaultValue]="deck().description"
           style="width: 100%; margin-top: 4px; padding: 0.5rem; resize: none;"
           placeholder="Description"
         ></textarea>

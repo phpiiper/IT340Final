@@ -167,11 +167,12 @@ export default class MainController {
                 req: req.body
             })
         }
-        const {deck, error, success, message} = await mainDAO.getDeck(req.cookies[process.env.COOKIE_NAME], body.id, body?.password)
+        const {deck, isOwner, error, success, message} = await mainDAO.getDeck(req.cookies[process.env.COOKIE_NAME], body.id, body?.password)
         let response = {
-            deck: deck,
+            deck,
             error, success,
-            message
+            message,
+            isOwner
         }
         res.json(response)
 
@@ -262,7 +263,7 @@ export default class MainController {
             }
             const {error, success, message} = await mainDAO.updateDeck(req.body.deck?._id, cookie, req.body.method, req.body.deck)
             if (error){
-                await mainDAO.log(2, "apiUpdateDeck", "Error Updating Deck", "")
+                await mainDAO.log(2, "apiUpdateDeck", "Error Updating Deck", `${cookie.id} encountered error (${message}) when creating a deck.`)
             }
             return res.json({success, error, message})
 
@@ -333,12 +334,12 @@ export default class MainController {
             if (!req?.body?.deckID){
                 return res.json({success: false, error: true, message: "Missing deckID in payload!"})
             }
-            const {error, message, deck} = await mainDAO.copyDeck(cookie, req.body.deckID, req?.body?.password)
+            const {error, message, deckId, deck} = await mainDAO.copyDeck(cookie, req.body.deckID, req?.body?.password)
             if (error){
                 return res.json({success: false, error: true, message})
             }
 
-            res.json({success: true, error: false, message: "Copied Deck!", deck})
+            res.json({success: true, error: false, message: "Copied Deck!", deckId, deck})
 
         } catch (e){
             console.log(e)
