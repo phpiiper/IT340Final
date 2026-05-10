@@ -1,6 +1,5 @@
 import { Component, signal, OnInit } from '@angular/core';
-import {Router} from '@angular/router';
-import {Card} from './card';
+import {Router, ActivatedRoute} from '@angular/router';
 import {FormGroup, FormControl, Validators, ReactiveFormsModule} from '@angular/forms';
 import {MatIcon} from '@angular/material/icon';
 import {CardType} from './createPage';
@@ -21,7 +20,7 @@ export interface DeckType {
   templateUrl: './decksPage.html',
 })
 export class DecksPage implements OnInit{
-  constructor(private router: Router){}
+  constructor(private router: Router, private route: ActivatedRoute){}
   loading = signal(true);
   decks = signal<DeckType[]>([])
   loggedIn = signal(false);
@@ -29,6 +28,16 @@ export class DecksPage implements OnInit{
   ngOnInit(){
     this.fetchDecks().then(res => {
         console.log(res)
+        this.route.queryParamMap.subscribe(params => {
+          const copy = params.get('copy');
+          if (copy) {
+              // fill in copy
+              this.copyForm.setValue({
+                id: copy,
+                password: ""
+              })
+          }
+        });
       })
     }
 

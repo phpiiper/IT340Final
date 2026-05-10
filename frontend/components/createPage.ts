@@ -73,6 +73,7 @@ export class CreatePage implements OnInit{
               if (user && user.id !== d.deck.author){return console.log("access denied to edit deck")}
               // can edit...
               this.deck.set(d.deck)
+              this.deck_type.set(d.deck.type)
           });
       }
     });
@@ -300,7 +301,7 @@ export class CreatePage implements OnInit{
         const d = await res.json()
         if (d.error) {return console.log("UPDATE Data Res Error: ", d.message)}
         console.log(d)
-        // window.location.href = `/deck/${d.deckId}`
+        window.location.href = `/deck/${d.deckId}`
       } else {
         // create new deck
         const res = await fetch(`${environment.backend}/api/deck/create`,{
@@ -422,7 +423,7 @@ export class CreatePage implements OnInit{
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          message
+          message: `${message} It has ${this.deck().maxCards || 10} cards.`
         })
       })
       console.log(r)

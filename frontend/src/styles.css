@@ -129,7 +129,9 @@ main.main {
   margin-left: unset;
 }
 .filter-container .filter-btn.active {
-  background-color: pink;
+  background-color: #c2e0e6;
+  border-color: transparent;
+  user-select: none;
 }
 
 .form.filter-search {
@@ -329,6 +331,16 @@ div.hide {
   margin: 0 !important;
 }
 
+#deck-page .header {
+  height: fit-content;
+}
+.error {
+  width: 100%; height: calc(100% - 50px - 2rem - 150px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center; align-items: center;
+  gap: 0.75rem;
+}
 
 
 

@@ -12,22 +12,25 @@
   </div>
   } @else {
     @if (!loading() && passwordRequired() && !deckUnlocked()) {
-      <h2>Password Required!</h2>
-      <form
-          class="form"
-          [formGroup]="passwordForm"
-          (ngSubmit)="sendPassword()"
-      >
-        <input
-          type="password"
-          placeholder="Password"
-          name="password"
-          formControlName="password"
-        />
-        <button
+      <div style="width: 70%; height: 50%; margin:auto; display: flex; flex-direction: column; gap: 1rem;">
+        <h2>Password Required!</h2>
+        <form
+            class="form"
+            [formGroup]="passwordForm"
+            (ngSubmit)="sendPassword()"
+        >
+          <input
+            type="password"
+            placeholder="Password"
+            name="password"
+            formControlName="password"
+            style="padding: 0.5rem;"
+          />
+          <button
 
-        >Submit</button>
-      </form>
+          >Submit</button>
+        </form>
+      </div>
     } @else if (deck()) {
       <div class="deck-info-container">
         <div class="meta-data">
@@ -37,6 +40,10 @@
         <div class="meta-data">
           <span>DECK SIZE</span>
           <span>{{deck().cards.length}} {{deck().cards.length !== 10 ? "(Not standard)" :""}}  </span>
+        </div>
+        <div class="meta-data">
+          <span>DESCRIPTION</span>
+          <span>{{deck().description}}  </span>
         </div>
 
         <div class="meta-data">

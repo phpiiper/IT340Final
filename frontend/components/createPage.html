@@ -100,6 +100,7 @@
             [value]="cardFilters().maxCost"
           >
         </label>
+        <button type="button" (click)="filterHandler">Apply</button>
     </form>
   </div>
   <div class="card-list list">
@@ -116,7 +117,6 @@
             name="{{c.name}}"
             path="cards/{{c.path}}"
             expansion="{{c.expansion}}"
-            (cardClick)="addCardToDeck(c.name)"
             size="{{card_size()}}"
           ></plp-card>
         } @empty {

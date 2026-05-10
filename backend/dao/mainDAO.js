@@ -197,14 +197,19 @@ export default class MainDAO {
         if (!deck) {
             return {error: true, message: "Deck doesn't exist!"}
         }
-        if (!user && ["Private","Password"].includes(deck.type)){
+        // if user doesn't exist... can only access public AND password
+        if (!user && !["Password","Public"].includes(deck.type)) {
             return {error: true, message: "Deck doesn't exist!"}
         }
-        else if (user?.role === "U" && deck.password && deck.type === "Private") {
-            if (!password){ return {error: true, message: "Password required!"}  }
-            const pwdMatch = bcrypt.compareSync(password, deck.password)
-            if (!pwdMatch) {
-                return {error: true, message: "Password doesn't match!"}
+        // check if password protected
+        if (deck.password && deck.type === "Password" && user?.role !== "A") {
+            if (deck.author.toString() !== user?._id.toString()) {
+                console.log(password)
+                if (!password){ return {error: true, message: "Password required!"}  }
+                const pwdMatch = bcrypt.compareSync(password, deck.password)
+                if (!pwdMatch) {
+                    return {error: true, message: "Password doesn't match!"}
+                }
             }
         }
         else if (user?.role === "U" && deck.type === "Private" && deck.author.toString() !== user._id.toString()) {
@@ -212,7 +217,8 @@ export default class MainDAO {
          }
         const finCards = await cards.find({_id: {$in: deck.cards.map(x => new ObjectId(x))}}).toArray()
         const finDeck = {...deck, cards: finCards}
-        return {user, deck: finDeck, success: true, error: false, message: "Deck found!", isOwner: finDeck.author.toString() === user._id.toString()}
+        delete finDeck.password
+        return {user, deck: finDeck, success: true, error: false, message: "Deck found!", isOwner: finDeck?.author.toString() === user?._id?.toString()}
     }
 
     static async getUserDecks(userCookies) {
@@ -227,12 +233,10 @@ export default class MainDAO {
             }
 
             const userId = user?._id?.toString();
-            let allDecks = await decks.find({author: new ObjectId(userId) }).toArray()
-
+            let allDecks = await decks.find({author: userId }).toArray()
             if (!allDecks) {
                 return {error: true, message: "Decks don't exist!", decks: []}
             }
-
             return {
                 decks: allDecks,
                 success: true, error: false,
@@ -253,7 +257,7 @@ export default class MainDAO {
         if (!["Public","Private","Password"].includes(type)){
             return {error: true, message: "Incorrect tag type!"}
         }
-        if (type === "Password" && (!password || password?.length > 3)){
+        if (type === "Password" && (!password || password?.length < 3)){
             return {error: true, message: "Invalid deck password! Must be at least 3 characters long!"}
         }
         // CHECK CARDS
@@ -286,10 +290,11 @@ export default class MainDAO {
                     finDeck.password = bcrypt.hashSync(finDeck.password, 10)
                 }
             }
+            const id = finDeck._id
             delete finDeck._id
             decks.updateOne({_id: deck._id}, {$set: finDeck})
 
-            return {error: false, success: true, message: "Deck successfully updated!"}
+            return {error: false, success: true, message: "Deck successfully updated!", deckId: id}
         } else {
             return {error: true, message: "Invalid mode given!"}
         }
@@ -316,6 +321,7 @@ export default class MainDAO {
             if (error){return {error: true, message}}
             let hashedPassword = null
             if (type === "Private" && password){
+                console.log("HASH",password)
                 hashedPassword = bcrypt.hashSync(password, 10)
             }
             const deckId = new ObjectId()
@@ -653,7 +659,7 @@ export default class MainDAO {
 
          const openAIClient = await project.getOpenAIClient();
          const response = await openAIClient.responses.create({
-             input: (message || "Generate a deck by selecting two cards at random and create the deck around their abilities/types.") + " Ensure response is JSON parseable.",
+             input: (message || "Generate a deck by selecting two cards at random and create the deck around their abilities/types.") + " Ensure response is JSON parseable. Do not use double slashes or any other comment style.",
              store: false,
              agent_reference: {
                  name: process.env.AGENT_NAME,

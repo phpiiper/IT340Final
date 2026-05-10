@@ -261,11 +261,11 @@ export default class MainController {
             if (!req?.body?.deck || !req?.body?.method){
                 return res.json({success: false, error: true, message: "Missing deck in payload!"})
             }
-            const {error, success, message} = await mainDAO.updateDeck(req.body.deck?._id, cookie, req.body.method, req.body.deck)
+            const {error, success, message, deckId} = await mainDAO.updateDeck(req.body.deck?._id, cookie, req.body.method, req.body.deck)
             if (error){
                 await mainDAO.log(2, "apiUpdateDeck", "Error Updating Deck", `${cookie.id} encountered error (${message}) when creating a deck.`)
             }
-            return res.json({success, error, message})
+            return res.json({success, error, message, deckId})
 
         } catch (e){
             console.log(e)

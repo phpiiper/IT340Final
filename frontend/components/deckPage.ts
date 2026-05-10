@@ -42,6 +42,7 @@ export class DeckPage implements OnInit{
     const data = await res.json();
     console.log(44,data)
     if (data.error){
+      console.log(data.message)
       if (data.message === "Password required!"){
         this.passwordRequired.set(true)
       } else {
@@ -87,7 +88,7 @@ export class DeckPage implements OnInit{
   isLoading = signal(false);
 
   passwordForm = new FormGroup({
-    password: new FormControl('oldpw', Validators.required),
+    password: new FormControl('', Validators.required),
   });
   async sendPassword(){
       this.isLoading.set(true);
