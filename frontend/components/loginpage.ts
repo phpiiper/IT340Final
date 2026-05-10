@@ -86,9 +86,9 @@ export class LoginPage implements OnInit{
     }
   }
   profileForm = new FormGroup({
-    username: new FormControl('phpiiper', Validators.required),
-    password: new FormControl('@Spirit39s', Validators.required),
-    email: new FormControl('plp@njit.edu', Validators.required),
+    username: new FormControl('', Validators.required),
+    password: new FormControl('', Validators.required),
+    email: new FormControl('', Validators.required),
   });
   async fetchUser(){
     const res = await fetch(`${environment.backend}/api/auth/checkLogin`,{
