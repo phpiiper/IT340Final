@@ -39,6 +39,7 @@ export class LoginPage implements OnInit{
     const signInObj = this.profileForm.value;
     if (tab === 0){
       // LOG IN
+      this.disableUserFormHandler(true)
       const res = await fetch(`${environment.backend}/api/auth/login`,{
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -56,10 +57,12 @@ export class LoginPage implements OnInit{
       } else {
         console.log("Error: ", js.message)
       }
+      this.disableUserFormHandler(false)
       return
     } else if (tab === 1){
       // SIGN UP
       console.log("SIGN UP",signInObj)
+      this.disableUserFormHandler(true)
       const res = await fetch(`${environment.backend}/api/auth/register`,{
         method: "POST",
         headers: {"Content-Type": "application/json"},
@@ -78,6 +81,7 @@ export class LoginPage implements OnInit{
           ...prev, error: true, message: data.message
         }))
       }
+      this.disableUserFormHandler(false)
       return
     }
   }
@@ -119,6 +123,21 @@ export class LoginPage implements OnInit{
     if (d.error) {return console.log("ERR: ",d.message)}
     console.log("VERIFIED!")
     await this.router.navigate(['/create'])
+  }
+
+  profileFormDisabled = signal(false);
+  disableUserFormHandler(choice: boolean){
+    if (choice){
+      this.profileForm.get("username")?.disable();
+      this.profileForm.get("email")?.disable();
+      this.profileForm.get("password")?.disable();
+      this.profileFormDisabled.set(true)
+    } else {
+      this.profileForm.get("username")?.enable();
+      this.profileForm.get("email")?.enable();
+      this.profileForm.get("password")?.enable();
+      this.profileFormDisabled.set(false)
+    }
   }
 
 }

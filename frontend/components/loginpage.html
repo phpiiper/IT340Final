@@ -62,14 +62,14 @@
           href="#"
           (click)="swapTab(1)"
         >Register</a>
-        <button type="submit">Login</button>
+        <button type="submit" [disabled]="profileFormDisabled()">Login</button>
       }
       @if (tab() === 1){
         <a
           href="#"
           (click)="swapTab(0)"
         >Login</a>
-        <button type="submit">Register</button>
+        <button type="submit" [disabled]="profileFormDisabled()">Register</button>
       }
     </div>
     <span class="error">
