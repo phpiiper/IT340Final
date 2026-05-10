@@ -4,10 +4,12 @@
     @if (!loading() && deck()){
         <a href="/decks">Decks</a>
     }
-    <h2>Deck</h2>
   </div>
   @if (loading()){
+  <div>
     <h2>Loading...</h2>
+    <a href="/">Go Back</a>
+  </div>
   } @else {
     @if (!loading() && passwordRequired() && !deckUnlocked()) {
       <h2>Password Required!</h2>
@@ -33,29 +35,51 @@
           <span>{{deck()?.name}}</span>
         </div>
         <div class="meta-data">
-          <span>MAX CARDS</span>
-          <span>{{deck()?.maxCards}}</span>
+          <span>DECK SIZE</span>
+          <span>{{deck().cards.length}} {{deck().cards.length !== 10 ? "(Not standard)" :""}}  </span>
         </div>
-      </div>
-      <div class="tags-container">
-        @for (tag of deck()?.tags ?? []; track tag) {
-          <span class="tag">{{tag}}</span>
-        }
-      </div>
-      <div>
-        <h2>Cards</h2>
-        <div class="cards-container">
-          @for (card of deck()?.cards ?? []; track card.name) {
-            <plp-card
-              name="{{card.name}}"
-              path="cards/{{card.path}}"
-              expansion="{{card.expansion}}"
-            ></plp-card>
+
+        <div class="meta-data">
+          <span>TAGS</span>
+          @for (tag of deck()?.tags ?? []; track tag) {
+            <span class="tag">{{tag}}</span>
+          } @empty {
+            <span>No Tags</span>
           }
         </div>
+
+        <div class="button-list">
+          <button
+            (click)="exportDeck()"
+            [disabled]="disableButtons()"
+          >Export Deck</button>
+          <button
+            (click)="copyDeck()"
+            [disabled]="disableButtons()"
+            >Copy Deck</button>
+          @if (canEdit()) {
+            <a href="/create?edit={{deck()._id}}"><button
+              [disabled]="disableButtons()"
+            >Edit Deck</button></a>
+          }
+        </div>
+
+      </div>
+      <div class="cards-container">
+        @for (card of deck()?.cards ?? []; track card.name) {
+          <plp-card
+            name="{{card.name}}"
+            path="cards/{{card.path}}"
+            expansion="{{card.expansion}}"
+          ></plp-card>
+        }
       </div>
     } @else {
+    <div class="error">
       <h2>Deck is Locked</h2>
+      <p>You do not have access to view this deck.</p>
+      <a href="/">Go Back</a>
+    </div>
     }
   }
 </div>

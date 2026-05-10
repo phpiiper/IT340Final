@@ -1,4 +1,4 @@
-<div class="body" id="deck-page">
+<div class="body" id="decks-page">
   <div class="nav-bar">
     <a href="/create"><button>
       <mat-icon>edit</mat-icon>
@@ -33,6 +33,8 @@
             <button
               (click)="updateDeck(deck._id, 'delete')"
             >Delete</button>
+            <button
+            ><a href="/create?edit={{deck._id}}">Edit</a></button>
             <h3>{{deck.name}}</h3>
             <a href="/deck/{{deck._id}}" class="link">
               <button>View Deck</button>

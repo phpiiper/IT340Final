@@ -1,6 +1,5 @@
-import { Component, signal, OnInit, input, resource, computed } from '@angular/core';
+import { Component, signal, OnInit, resource } from '@angular/core';
 import {Router, ActivatedRoute} from '@angular/router';
-import {MatButton} from '@angular/material/button';
 import {Card} from './card';
 import {FormGroup, FormControl, Validators, ReactiveFormsModule} from '@angular/forms';
 import {CardType} from './createPage';
@@ -50,8 +49,15 @@ export class DeckPage implements OnInit{
       }
     } else {
       if (data.deck){
+        if (data.isOwner) { this.canEdit.set(true) }
         this.deck.set(data.deck)
         this.deckUnlocked.set(true)
+        this.editDeckForm.setValue({
+            name: data.deck.name || "",
+            tags: data.deck.tags.join(","),
+            type: data.deck.type || "Private",
+            password: data.deck.password || ""
+        })
       }
     }
     this.loading.set(false)
@@ -63,6 +69,7 @@ export class DeckPage implements OnInit{
   loading = signal(true);
   deck = signal<any>(null)
   deckUnlocked = signal(false)
+  canEdit = signal(false)
 
   cards = resource({
     loader: async ()=>{
@@ -77,14 +84,6 @@ export class DeckPage implements OnInit{
     }
   })
 
-  async logout(){
-    const r = await fetch(`${environment.backend}/api/auth/signOut`,{
-      credentials: "include",
-    })
-    // console.log(await r.json())
-    window.location.reload()
-  }
-
   isLoading = signal(false);
 
   passwordForm = new FormGroup({
@@ -94,6 +93,87 @@ export class DeckPage implements OnInit{
       this.isLoading.set(true);
       await this.fetchDeck()
       this.isLoading.set(false);
+  }
+
+  disableButtons = signal(false)
+  async exportDeck(){
+    try {
+      this.disableButtons.set(true)
+      const id = this.route.snapshot.paramMap.get("id")
+      const res = await fetch(`${environment.backend}/api/deck/export`,{
+        method: 'POST',
+        credentials: "include",
+        headers: {"Content-Type": "application/json" },
+        body: JSON.stringify({ deckID: id }),
+      })
+      if (!res.ok) { console.error("Export request failed"); return; }
+      const blob = await res.blob();
+      this.downloadBlob(blob, `dm-${id}.json`)
+    } catch (e){
+      console.error(e)
+    } finally {
+      this.disableButtons.set(false)
+    }
+  }
+  downloadBlob(blob: Blob, name: string){
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = name
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+  }
+  async copyDeck(){
+    try {
+      this.disableButtons.set(true)
+      const id = this.route.snapshot.paramMap.get("id")
+      let urlString = `/decks?copy=${id}`
+      if (this.passwordRequired()){ urlString += `&&password=${this.passwordForm.value.password}` }
+
+      window.location.href = urlString
+    } catch (e){
+      console.error(e)
+    } finally {
+      this.disableButtons.set(false)
+    }
+  }
+  editingDeck = signal(false)
+  editDeck(state: boolean){
+      this.disableButtons.set(state)
+      this.editingDeck.set(state)
+  }
+  closeEditDeck(event: Event){
+    const ev = event.target as HTMLInputElement;
+      if (!ev || !ev.id){return}
+      if (ev.id === "edit-deck-popup"){
+        this.editDeck(false)
+      }
+  }
+  editDeckTab = signal("Cards")
+  toggleEditDeckTab(event: Event){
+    const parent = event.currentTarget as HTMLInputElement;
+    const current = event.target as HTMLInputElement;
+    if (!parent || !current || parent === current){return}
+    const options = Array.from(parent.childNodes).map(x => x.textContent);
+    if (options.length <= 1){return}
+    if (options.find(x => current.textContent)){
+        this.editDeckTab.set(current.textContent)
+    }
+  }
+  editDeckForm = new FormGroup({
+    name: new FormControl('oldpw', Validators.required),
+    tags: new FormControl(''),
+    type: new FormControl('', Validators.required),
+    password: new FormControl(''),
+  });
+  card_size = signal("md")
+  toggle_card_size(){
+    let options = ["lg","md","sm"]
+    let i_ind = options.findIndex(x => x === this.card_size()) + 1
+    if (i_ind === options.length) {i_ind = 0}
+    this.card_size.set(options[i_ind])
   }
 
 }
